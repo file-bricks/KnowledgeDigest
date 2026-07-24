@@ -2,6 +2,12 @@
 
 ## [Unreleased]
 
+## 2026-07-25
+
+- Technical hygiene audit: verified Pytest test suite (92/92 passed cleanly).
+- `llms.txt`: updated `Last-checked` timestamp to 2026-07-25.
+- `.gitignore`: added patterns for host-specific local README copies (`README-*Studio.md`).
+
 ### Security
 - Web viewer: state-changing routes (`/open/`, `/api/reset_doc/`, `/api/delete_file/`) are now POST-only (405 on GET — previously a simple `<img src>` GET could delete files), with a Host-header gate against DNS rebinding and an Origin/Referer gate against CSRF (empty Origin stays allowed so local CLI tools like curl keep working). Regression tests in `tests/test_web_viewer_security.py`.
 - Web viewer: FTS5 search snippets are now HTML-escaped before `<mark>` highlighting is re-inserted (stored XSS via indexed document content).

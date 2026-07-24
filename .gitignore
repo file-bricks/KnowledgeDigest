@@ -73,3 +73,7 @@ scripts/process_summaries.py
 
 # Multi-Agent Lock-System (lokal, nie committen)
 LOCK*.txt
+
+# Host-spezifische README-Kopien (lokal)
+README-*Studio.md
+README_de-*Studio.md
