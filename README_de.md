@@ -5,14 +5,54 @@
 **[English](README.md)** | [Deutsch](README_de.md)
 
 [![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/)
+[![Pytest 92 Passed](https://img.shields.io/badge/pytest-92%20bestanden-brightgreen.svg)](https://github.com/file-bricks/knowledgedigest)
 [![Lizenz: MIT](https://img.shields.io/badge/Lizenz-MIT-yellow.svg)](LICENSE)
 [![SQLite FTS5](https://img.shields.io/badge/Suche-FTS5-green.svg)]()
+[![Local-First](https://img.shields.io/badge/Datenschutz-Local--First-blue.svg)]()
+[![LLM-Ready](https://img.shields.io/badge/LLM-Nativ-purple.svg)]()
 
 > Portable, eigenständige Wissensdatenbank — indexiert Dokumente, chunked sie und macht sie über FTS5 durchsuchbar. Optionale LLM-Zusammenfassung. PySide6 Desktop-GUI + Web-Viewer.
 
+> [!NOTE]
+> **Für KI-Agenten & LLM-Pipelines**: KnowledgeDigest dient als offline-fähige, telemetriefreie Dokumenten-Retrieval-Datenbank für KI-Agenten. Dokumente werden in satzkonforme Einheiten (~350 Wörter) zerlegt, mit SQLite BM25 FTS5 indexiert, per LLM (Haiku / Gemini Flash) zusammengefasst und über saubere Python/CLI/REST-Schnittstellen bereitgestellt.
+
 ---
 
+## Systemarchitektur & Datenfluss
+
+```mermaid
+flowchart TD
+    subgraph Input["Dokumenten-Eingabe"]
+        DOCS["Quelldateien (PDF, DOCX, HTML, TXT, MD)"]
+    end
+
+    subgraph CoreEngine["KnowledgeDigest Kern-Engine"]
+        EXT["Text-Extraktion (PyMuPDF, docx, html)"]
+        CHUNK["Satzkonformes Chunking (~350 Wörter)"]
+        FTS["SQLite FTS5 Volltextsuche (BM25)"]
+        SUMM["LLM-Zusammenfassungs-Queue (Haiku / Gemini Flash)"]
+    end
+
+    subgraph Interfaces["Schnittstellen"]
+        GUI["PySide6 Desktop-GUI (3-Panel Layout)"]
+        WEB["Stdlib Web-Viewer (http://localhost:8787)"]
+        CLI["CLI Command Suite (python -m KnowledgeDigest)"]
+        API["Python API (from KnowledgeDigest import KnowledgeDigest)"]
+    end
+
+    DOCS --> EXT
+    EXT --> CHUNK
+    CHUNK --> FTS
+    CHUNK -.-> SUMM
+    SUMM -.-> FTS
+    FTS --> GUI
+    FTS --> WEB
+    FTS --> CLI
+    FTS --> API
+```
+
 ## Einstieg
+
 
 | Thema | Ort |
 |---|---|

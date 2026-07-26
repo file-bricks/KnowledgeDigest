@@ -43,3 +43,7 @@ packages = [
 
 [tool.setuptools.package-dir]
 KnowledgeDigest = "."
+
+[tool.pytest.ini_options]
+pythonpath = "."
+testpaths = ["tests"]

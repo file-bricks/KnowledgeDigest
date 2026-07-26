@@ -5,12 +5,16 @@
 **[Deutsch](README_de.md)** | [English](README.md)
 
 [![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/)
+[![Pytest 92 Passed](https://img.shields.io/badge/pytest-92%20passed-brightgreen.svg)](https://github.com/file-bricks/knowledgedigest)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![SQLite FTS5](https://img.shields.io/badge/search-FTS5-green.svg)]()
+[![Local-First](https://img.shields.io/badge/privacy-local--first-blue.svg)]()
+[![LLM-Ready](https://img.shields.io/badge/LLM-Ready-purple.svg)]()
 
 > Portable, self-contained knowledge database — indexes documents, chunks them, and makes them searchable via FTS5. Optional LLM summarization. PySide6 GUI + Web Viewer.
 
-
+> [!NOTE]
+> **For AI Agents & LLM Pipelines**: KnowledgeDigest is built as an offline, zero-telemetry document retrieval database for LLM agents. Documents are chunked into sentence-bounded sections (~350 words) with BM25 FTS5 ranking, optional Claude Haiku / Gemini Flash summary queuing, and clean Python/CLI/REST interfaces.
 
 ```bash
 git clone https://github.com/file-bricks/knowledgedigest
@@ -28,41 +32,47 @@ python -m KnowledgeDigest --web
 python -m KnowledgeDigest status
 ```
 
-[![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
-
 🇩🇪 [Deutsche Dokumentation → README_de.md](README_de.md)
 
 ---
 
-## What It Does
+## Architecture & Data Flow
 
 KnowledgeDigest transforms raw documents into a structured, searchable knowledge base:
 
+```mermaid
+flowchart TD
+    subgraph Input["Document Ingestion"]
+        DOCS["Raw Files (PDF, DOCX, HTML, TXT, MD)"]
+    end
+
+    subgraph CoreEngine["KnowledgeDigest Core Engine"]
+        EXT["Text Extraction (PyMuPDF, docx, html)"]
+        CHUNK["Sentence-Bounded Chunking (~350 words)"]
+        FTS["SQLite FTS5 Full-Text Search (BM25)"]
+        SUMM["LLM Summarizer Queue (Haiku / Gemini Flash)"]
+    end
+
+    subgraph Interfaces["Multi-Interface Access"]
+        GUI["PySide6 Desktop GUI (3-Panel Layout)"]
+        WEB["Stdlib Web Viewer (http://localhost:8787)"]
+        CLI["CLI Command Suite (python -m KnowledgeDigest)"]
+        API["Python API (from KnowledgeDigest import KnowledgeDigest)"]
+    end
+
+    DOCS --> EXT
+    EXT --> CHUNK
+    CHUNK --> FTS
+    CHUNK -.-> SUMM
+    SUMM -.-> FTS
+    FTS --> GUI
+    FTS --> WEB
+    FTS --> CLI
+    FTS --> API
 ```
-Add directories via GUI or config
-    |
-    v
-[1] Text Extraction      — PDF, DOCX, HTML, TXT, Markdown
-    |
-    v
-[2] Extraction: text from PDF/DOCX/HTML/TXT/MD
-    |
-    v
-[3] Chunking: split into sections (~350 words each)
-    |
-    v
-[4] Indexing: FTS5 full-text search + keyword extraction
-    |
-    v
-[5] Summarization (optional): Haiku LLM per chunk
-    - 3-5 sentence summary
-    - Keyword extraction
-    - Domain classification
-    |
-    v
-[6] Query: search via GUI, Web Viewer, CLI, or Python API
-```
+
+## What It Does
+
 
 ## Features
 

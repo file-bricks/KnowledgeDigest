@@ -2,6 +2,13 @@
 
 ## [Unreleased]
 
+## 2026-07-26
+
+- Discoverability, SEO & README Design Audit (Path B).
+- `README.md` & `README_de.md`: integrated Shields.io badges (Pytest 92 passed, Local-First, LLM-Ready), GFM LLM note callout (`> [!NOTE]`), and Mermaid system architecture diagram.
+- `pyproject.toml`: added `[tool.pytest.ini_options]` with `pythonpath = "."` and `testpaths = ["tests"]`.
+- `llms.txt`: updated `Last-checked` timestamp to `2026-07-26`.
+
 ## 2026-07-25
 
 - Technical hygiene audit: verified Pytest test suite (92/92 passed cleanly).
