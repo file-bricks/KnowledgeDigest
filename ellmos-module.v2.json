@@ -5,7 +5,7 @@
   "category": "knowledge",
   "kind": "service",
   "status": "alpha",
-  "visibility": "public-candidate",
+  "visibility": "public",
   "provides": [
     "knowledge.ingest",
     "knowledge.search",
