@@ -214,7 +214,7 @@ class PreviewPanel(QWidget):
             self._stack.setCurrentIndex(3)
 
     def _show_unsupported(self, ext):
-        self._unsupported_label.setText(f"Vorschau fuer {ext.upper()} nicht verfuegbar")
+        self._unsupported_label.setText(f"Vorschau für {ext.upper()} nicht verfügbar")
         self._stack.setCurrentIndex(3)
 
     def _show_info(self, doc):
@@ -223,7 +223,7 @@ class PreviewPanel(QWidget):
         lines.append(f"Dateiname: {doc.get('filename', '?')}")
         lines.append(f"Pfad: {doc.get('file_path', '?')}")
         lines.append(f"Typ: {doc.get('file_type', '?')}")
-        lines.append(f"Woerter: {doc.get('word_count', '?')}")
+        lines.append(f"Wörter: {doc.get('word_count', '?')}")
         lines.append(f"Chunks: {doc.get('chunk_count', '?')}")
         lines.append(f"Verzeichnis: {doc.get('source_dir', '?')}")
         lines.append("")

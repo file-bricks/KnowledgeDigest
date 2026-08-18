@@ -161,7 +161,7 @@ def page_dashboard(db_path):
         </div>
     </div>
     <h2>Dateitypen</h2>
-    <div class="card"><table><tr><th>Typ</th><th>Dateien</th><th>Woerter</th></tr>"""
+    <div class="card"><table><tr><th>Typ</th><th>Dateien</th><th>Wörter</th></tr>"""
 
     for r in by_type:
         w = r["words"] or 0
@@ -217,7 +217,7 @@ def page_summaries(db_path, page=1, per_page=25):
 
     body += '<div class="pager">'
     if page > 1:
-        body += f'<a href="/summaries?page={page-1}">&laquo; Zurueck</a>'
+        body += f'<a href="/summaries?page={page-1}">&laquo; Zurück</a>'
     if page < total_pages:
         body += f'<a href="/summaries?page={page+1}">Weiter &raquo;</a>'
     body += '</div>'
@@ -238,7 +238,7 @@ def page_browse(db_path, page=1, per_page=50):
 
     total_pages = max(1, (total + per_page - 1) // per_page)
     body = f'<h2>Dokumente ({total:,} gesamt, Seite {page}/{total_pages})</h2>'
-    body += '<div class="card"><table><tr><th>Datei</th><th>Typ</th><th>Woerter</th><th>Chunks</th><th>Summaries</th></tr>'
+    body += '<div class="card"><table><tr><th>Datei</th><th>Typ</th><th>Wörter</th><th>Chunks</th><th>Summaries</th></tr>'
     for r in rows:
         badge = '<span class="badge badge-green">done</span>' if r["sum_count"] > 0 else '<span class="badge badge-orange">pending</span>'
         body += f'<tr><td><a href="/doc/{r["id"]}">{_esc(r["filename"])}</a></td>'
@@ -248,7 +248,7 @@ def page_browse(db_path, page=1, per_page=50):
 
     body += '<div class="pager">'
     if page > 1:
-        body += f'<a href="/browse?page={page-1}">&laquo; Zurueck</a>'
+        body += f'<a href="/browse?page={page-1}">&laquo; Zurück</a>'
     if page < total_pages:
         body += f'<a href="/browse?page={page+1}">Weiter &raquo;</a>'
     body += '</div>'
@@ -282,16 +282,16 @@ def page_doc(db_path, doc_id):
     <div class="card"><table>
         <tr><td style="color:var(--text2)">Pfad</td><td style="font-size:0.85em">
             <a href="#" onclick="openFile({doc_id}); return false;"
-               style="cursor:pointer" title="Datei oeffnen">{_esc(doc['file_path'])}</a></td></tr>
+               style="cursor:pointer" title="Datei öffnen">{_esc(doc['file_path'])}</a></td></tr>
         <tr><td style="color:var(--text2)">Typ</td><td><span class="badge badge-blue">{_esc(doc['file_type'])}</span></td></tr>
-        <tr><td style="color:var(--text2)">Woerter</td><td>{doc['word_count']:,}</td></tr>
+        <tr><td style="color:var(--text2)">Wörter</td><td>{doc['word_count']:,}</td></tr>
         <tr><td style="color:var(--text2)">Chunks</td><td>{doc['chunk_count']}</td></tr>
         <tr><td style="color:var(--text2)">Indexiert</td><td>{_esc(doc['ingested_at'])}</td></tr>
     </table>
     <div style="margin-top:12px">
         <a href="#" onclick="openFile({doc_id}); return false;"
            style="display:inline-block;padding:8px 16px;background:var(--accent);color:#fff;
-           border-radius:6px;font-weight:600;cursor:pointer;text-decoration:none">Datei oeffnen</a>
+           border-radius:6px;font-weight:600;cursor:pointer;text-decoration:none">Datei öffnen</a>
         <a href="#" onclick="resetDoc({doc_id}); return false;"
            style="display:inline-block;padding:8px 16px;background:var(--red);color:#fff;
            border-radius:6px;font-weight:600;cursor:pointer;text-decoration:none;margin-left:12px">
@@ -308,7 +308,7 @@ def page_doc(db_path, doc_id):
             .catch(e => alert('Fehler: ' + e));
     }}
     function resetDoc(docId) {{
-        if(!confirm('Summaries fuer dieses Dokument loeschen und neu berechnen lassen?')) return;
+        if(!confirm('Summaries für dieses Dokument löschen und neu berechnen lassen?')) return;
         fetch('/api/reset_doc/' + docId, {{method: 'POST'}})
             .then(r => r.json())
             .then(data => {{
@@ -403,7 +403,7 @@ def page_search(db_path, query="", limit=30):
                 body += f"""<div class="card">
                     <a href="/doc/{r['id']}"><strong>{_esc(r['filename'])}</strong></a>
                     <span class="badge badge-blue" style="margin-left:8px">{_esc(r['file_type'])}</span>
-                    <span style="color:var(--text2);margin-left:8px">{r['word_count']:,} Woerter</span>
+                    <span style="color:var(--text2);margin-left:8px">{r['word_count']:,} Wörter</span>
                     <p style="font-size:0.9em;margin-top:6px">{snippet}</p>
                 </div>"""
         else:
@@ -422,7 +422,7 @@ def page_folders(db_path):
     conn.close()
 
     body = '<h2>Ordner</h2>'
-    body += '<div class="card"><table><tr><th>Ordner</th><th>Dateien</th><th>Woerter</th><th>Summaries</th><th>%</th></tr>'
+    body += '<div class="card"><table><tr><th>Ordner</th><th>Dateien</th><th>Wörter</th><th>Summaries</th><th>%</th></tr>'
     for r in rows:
         cnt = r["cnt"]
         sc = r["sum_cnt"]

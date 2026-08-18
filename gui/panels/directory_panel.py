@@ -43,7 +43,7 @@ class DirectoryPanel(QWidget):
 
         self._btn_add = QPushButton("+")
         self._btn_add.setFixedSize(24, 24)
-        self._btn_add.setToolTip("Verzeichnis hinzufuegen")
+        self._btn_add.setToolTip("Verzeichnis hinzufügen")
         self._btn_add.clicked.connect(self._add_directory)
         header.addWidget(self._btn_add)
 
@@ -62,7 +62,7 @@ class DirectoryPanel(QWidget):
         self._tree.customContextMenuRequested.connect(self._show_context_menu)
 
     def _populate(self):
-        """Fuellt den Baum mit indexierten Verzeichnissen."""
+        """Füllt den Baum mit indexierten Verzeichnissen."""
         self._tree.clear()
 
         # "Alle Dokumente" als erstes Item
@@ -81,7 +81,7 @@ class DirectoryPanel(QWidget):
             item.setToolTip(0, d["path"])
             self._tree.addTopLevelItem(item)
 
-        # Erstes Item auswaehlen
+        # Erstes Item auswählen
         if self._tree.topLevelItemCount() > 0:
             self._tree.setCurrentItem(self._tree.topLevelItem(0))
 
@@ -89,15 +89,15 @@ class DirectoryPanel(QWidget):
         self._populate()
 
     def _add_directory(self):
-        """Oeffnet Dialog zum Hinzufuegen."""
+        """Öffnet Dialog zum Hinzufügen."""
         path = QFileDialog.getExistingDirectory(
-            self, "Verzeichnis zum Indexieren auswaehlen"
+            self, "Verzeichnis zum Indexieren auswählen"
         )
         if path:
             result = self._kd.add_directory(path)
             if result.get("ok"):
                 self._bus.emit(EventType.DIRECTORY_ADDED, path)
-                self._bus.emit(EventType.STATUS_MESSAGE, f"Hinzugefuegt: {path}")
+                self._bus.emit(EventType.STATUS_MESSAGE, f"Hinzugefügt: {path}")
                 self.refresh()
 
     def _on_item_changed(self, current, previous):
@@ -120,7 +120,7 @@ class DirectoryPanel(QWidget):
         action_scan.triggered.connect(lambda: self._scan_directory(path))
         menu.addAction(action_scan)
 
-        action_explorer = QAction("Im Explorer oeffnen", self)
+        action_explorer = QAction("Im Explorer öffnen", self)
         action_explorer.triggered.connect(lambda: self._open_in_explorer(path))
         menu.addAction(action_explorer)
 
@@ -157,7 +157,7 @@ class DirectoryPanel(QWidget):
         result = QMessageBox.question(
             self, "Verzeichnis entfernen",
             f"Verzeichnis aus der Index-Liste entfernen?\n\n{path}\n\n"
-            "(Die Dateien werden nicht geloescht, nur aus der Liste entfernt.)",
+            "(Die Dateien werden nicht gelöscht, nur aus der Liste entfernt.)",
             QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No
         )
         if result == QMessageBox.StandardButton.Yes:

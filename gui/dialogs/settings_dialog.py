@@ -64,7 +64,7 @@ class SettingsDialog(QDialog):
         dl.addWidget(self._dir_list)
 
         btn_row = QHBoxLayout()
-        btn_add = QPushButton("Hinzufuegen...")
+        btn_add = QPushButton("Hinzufügen...")
         btn_add.clicked.connect(self._add_dir)
         btn_remove = QPushButton("Entfernen")
         btn_remove.clicked.connect(self._remove_dir)
@@ -81,7 +81,7 @@ class SettingsDialog(QDialog):
 
         self._spin_chunk = QSpinBox()
         self._spin_chunk.setRange(50, 2000)
-        fi.addRow("Chunk-Groesse (Woerter):", self._spin_chunk)
+        fi.addRow("Chunk-Größe (Wörter):", self._spin_chunk)
 
         self._spin_overlap = QSpinBox()
         self._spin_overlap.setRange(0, 200)
@@ -95,7 +95,7 @@ class SettingsDialog(QDialog):
 
         self._spin_min_words = QSpinBox()
         self._spin_min_words.setRange(0, 1000)
-        fi.addRow("Mindest-Woerter:", self._spin_min_words)
+        fi.addRow("Mindest-Wörter:", self._spin_min_words)
 
         self._tabs.addTab(self._tab_ingest, "Ingestion")
 
@@ -161,17 +161,17 @@ class SettingsDialog(QDialog):
         self.accept()
 
     def _browse_db(self):
-        path, _ = QFileDialog.getOpenFileName(self, "DB-Datei waehlen", "", "SQLite (*.db)")
+        path, _ = QFileDialog.getOpenFileName(self, "DB-Datei wählen", "", "SQLite (*.db)")
         if path:
             self._edit_db.setText(path)
 
     def _browse_bach_db(self):
-        path, _ = QFileDialog.getOpenFileName(self, "bach.db waehlen", "", "SQLite (*.db)")
+        path, _ = QFileDialog.getOpenFileName(self, "bach.db wählen", "", "SQLite (*.db)")
         if path:
             self._edit_bach_db.setText(path)
 
     def _add_dir(self):
-        path = QFileDialog.getExistingDirectory(self, "Verzeichnis auswaehlen")
+        path = QFileDialog.getExistingDirectory(self, "Verzeichnis auswählen")
         if path:
             self._dir_list.addItem(str(Path(path).resolve()))
 

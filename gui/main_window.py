@@ -57,7 +57,7 @@ class MainWindow(QMainWindow):
 
         # Verzeichnisse
         dir_menu = mb.addMenu("&Verzeichnisse")
-        dir_menu.addAction(self._make_action("Verzeichnis hinzufuegen...", self._add_directory, "Ctrl+O"))
+        dir_menu.addAction(self._make_action("Verzeichnis hinzufügen...", self._add_directory, "Ctrl+O"))
         dir_menu.addAction(self._make_action("Alle scannen", self._scan_all))
 
         # Ansicht
@@ -67,7 +67,7 @@ class MainWindow(QMainWindow):
 
         # Hilfe
         help_menu = mb.addMenu("&Hilfe")
-        help_menu.addAction(self._make_action("Ueber KnowledgeDigest", self._show_about))
+        help_menu.addAction(self._make_action("Über KnowledgeDigest", self._show_about))
 
     def _setup_toolbar(self):
         """Erstellt die Toolbar."""
@@ -150,20 +150,20 @@ class MainWindow(QMainWindow):
                 f"  {total} Dokumente  |  {chunks} Chunks  |  DB: {db_mb} MB  "
             )
         except Exception:
-            self._status_label.setText("  DB nicht verfuegbar  ")
+            self._status_label.setText("  DB nicht verfügbar  ")
 
     # --- Actions ---
 
     def _add_directory(self):
-        """Verzeichnis hinzufuegen via Dialog."""
+        """Verzeichnis hinzufügen via Dialog."""
         path = QFileDialog.getExistingDirectory(
-            self, "Verzeichnis zum Indexieren auswaehlen"
+            self, "Verzeichnis zum Indexieren auswählen"
         )
         if path:
             result = self._kd.add_directory(path)
             if result.get("ok"):
                 self._bus.emit(EventType.DIRECTORY_ADDED, path)
-                self._bus.emit(EventType.STATUS_MESSAGE, f"Verzeichnis hinzugefuegt: {path}")
+                self._bus.emit(EventType.STATUS_MESSAGE, f"Verzeichnis hinzugefügt: {path}")
                 self._dir_panel.refresh()
 
     def _scan_all(self):
