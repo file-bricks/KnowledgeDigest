@@ -27,7 +27,7 @@ flowchart TD
     end
 
     subgraph CoreEngine["KnowledgeDigest Kern-Engine"]
-        EXT["Text-Extraktion (PyMuPDF, docx, html)"]
+        EXT["Text-Extraktion (pdfplumber, docx, html)"]
         CHUNK["Satzkonformes Chunking (~350 Wörter)"]
         FTS["SQLite FTS5 Volltextsuche (BM25)"]
         SUMM["LLM-Zusammenfassungs-Queue (Haiku / Gemini Flash)"]
@@ -127,7 +127,7 @@ python -m KnowledgeDigest summarize --flash --limit 20
 
 ## Hauptkonzepte
 
-1. **Text-Extraktion**: Integrierte Parser für PDF (via PyMuPDF), Word-Dokumente (.docx), HTML-Seiten, Markdown- und reine Textdateien.
+1. **Text-Extraktion**: Integrierte Parser für PDF (via pdfplumber), Word-Dokumente (.docx), HTML-Seiten, Markdown- und reine Textdateien.
 2. **Chunking**: Zerlegung großer Dokumente in kleinere Sinneinheiten (Standard: ~350 Wörter) unter Berücksichtigung von Satzgrenzen, um Kontext für LLMs optimal aufzubereiten.
 3. **FTS5-Suche**: Volltextsuche direkt über SQLite FTS5 mit BM25-Relevanzbewertung und dynamischen Such-Snippets.
 4. **Zusammenfassungen (Summarization)**: Eine asynchrone Warteschlange verarbeitet Chunks und generiert strukturierte Zusammenfassungen (3-5 Sätze), Keywords und Domain-Tags mittels LLM (Haiku oder Gemini Flash).
@@ -147,7 +147,7 @@ python -m KnowledgeDigest summarize --flash --limit 20
 Bietet ein geteiltes 3-Spalten-Layout mit modernem Dark-Theme:
 - **Links**: Liste der indexierten Verzeichnisse mit Dokumentenanzahl.
 - **Mitte**: Sortier- und filterbare Dokumententabelle.
-- **Rechts**: Live-Vorschau des ausgewählten Dokuments (Text, PDF-Vorschau via PyMuPDF, Metadaten).
+- **Rechts**: Live-Vorschau des ausgewählten Dokuments (Text, PDF-Vorschau via pypdfium2, Metadaten).
 
 ## Web-Viewer
 
@@ -183,7 +183,7 @@ KnowledgeDigest kann optional mit dem Agentensystem [BACH](https://github.com/el
 
 - Python 3.10+
 - PySide6 (für Desktop-GUI)
-- PyMuPDF (für PDF-Vorschau in der GUI)
+- pypdfium2 (für PDF-Vorschau in der GUI; BSD-3-Clause/Apache-2.0, statt PyMuPDF gewählt, damit die MIT-Lizenz frei von AGPL-3.0 bleibt)
 - Für CLI und Web-Viewer sind keine zusätzlichen externen Abhängigkeiten notwendig.
 
 ## Laufzeitdaten

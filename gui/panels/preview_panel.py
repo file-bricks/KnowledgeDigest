@@ -187,28 +187,40 @@ class PreviewPanel(QWidget):
         self._stack.setCurrentIndex(2)
 
     def _show_pdf(self, path: Path):
+        """Rendert die erste PDF-Seite als Bild.
+
+        Bewusst pypdfium2 (BSD-3-Clause / Apache-2.0) statt PyMuPDF (AGPL-3.0)
+        -- Entscheidung E08 vom 2026-08-18. Kein geerbtes Copyleft in einem
+        als MIT ausgewiesenen Modul. Siehe tests/test_no_agpl.py.
+        """
         try:
-            import fitz
-            doc = fitz.open(str(path))
-            if doc.page_count > 0:
-                page = doc[0]
-                mat = fitz.Matrix(150/72, 150/72)
-                pix = page.get_pixmap(matrix=mat)
-                qimg = QImage(pix.samples, pix.width, pix.height,
-                              pix.stride, QImage.Format.Format_RGB888)
-                pixmap = QPixmap.fromImage(qimg)
-                max_size = QSize(700, 900)
-                if pixmap.width() > max_size.width() or pixmap.height() > max_size.height():
-                    pixmap = pixmap.scaled(max_size, Qt.AspectRatioMode.KeepAspectRatio,
-                                           Qt.TransformationMode.SmoothTransformation)
-                self._image_label.setPixmap(pixmap)
-                self._stack.setCurrentIndex(2)
-            doc.close()
+            import pypdfium2 as pdfium
         except ImportError:
             self._unsupported_label.setText(
-                "PDF-Vorschau benoetigt PyMuPDF:\npip install PyMuPDF"
+                "PDF-Vorschau benoetigt pypdfium2:\npip install pypdfium2"
             )
             self._stack.setCurrentIndex(3)
+            return
+        try:
+            doc = pdfium.PdfDocument(str(path))
+            try:
+                if len(doc) > 0:
+                    page = doc[0]
+                    bitmap = page.render(scale=150 / 72)
+                    try:
+                        qimg = QImage(bytes(bitmap.buffer), bitmap.width, bitmap.height,
+                                      bitmap.stride, QImage.Format.Format_BGR888)
+                        pixmap = QPixmap.fromImage(qimg)
+                    finally:
+                        bitmap.close()
+                    max_size = QSize(700, 900)
+                    if pixmap.width() > max_size.width() or pixmap.height() > max_size.height():
+                        pixmap = pixmap.scaled(max_size, Qt.AspectRatioMode.KeepAspectRatio,
+                                               Qt.TransformationMode.SmoothTransformation)
+                    self._image_label.setPixmap(pixmap)
+                    self._stack.setCurrentIndex(2)
+            finally:
+                doc.close()
         except Exception as e:
             self._unsupported_label.setText(f"PDF-Fehler:\n{e}")
             self._stack.setCurrentIndex(3)

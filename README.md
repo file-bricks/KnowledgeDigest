@@ -47,7 +47,7 @@ flowchart TD
     end
 
     subgraph CoreEngine["KnowledgeDigest Core Engine"]
-        EXT["Text Extraction (PyMuPDF, docx, html)"]
+        EXT["Text Extraction (pdfplumber, docx, html)"]
         CHUNK["Sentence-Bounded Chunking (~350 words)"]
         FTS["SQLite FTS5 Full-Text Search (BM25)"]
         SUMM["LLM Summarizer Queue (Haiku / Gemini Flash)"]
@@ -92,7 +92,7 @@ flowchart TD
 |-------|---------|
 | **Left** | Indexed directories with document counts |
 | **Center** | Document table (sortable, filterable) |
-| **Right** | Preview (text, PDF via PyMuPDF, images, metadata) |
+| **Right** | Preview (text, PDF via pypdfium2, images, metadata) |
 
 Toolbar: Add Directory, Scan, Search, Web Viewer, Settings
 
@@ -172,7 +172,7 @@ zero impact when disabled.
 
 - Python 3.10+
 - PySide6 (for GUI)
-- PyMuPDF (for PDF preview in GUI)
+- pypdfium2 (for PDF preview in GUI; BSD-3-Clause/Apache-2.0, chosen over PyMuPDF to keep the MIT license clean of AGPL-3.0)
 - No additional dependencies for CLI or Web Viewer
 
 ## Runtime Data

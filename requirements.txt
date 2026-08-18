@@ -9,7 +9,7 @@ beautifulsoup4>=4.12.0
 
 # GUI (optional, nur für --gui)
 PySide6>=6.6.0
-PyMuPDF>=1.24.0
+pypdfium2>=4.30.0
 
 # LLM Summarization (optional, nur für summarize-Befehl)
 anthropic>=0.79.0
