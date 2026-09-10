@@ -2,6 +2,15 @@
 
 ## [Unreleased]
 
+## 2026-09-10
+
+- Discoverability, Design & Architecture Enhancement (Path B).
+- Updated test badges to 130 passed tests, added PySide6 and Architecture badges.
+- Added comprehensive Ingestion & Retrieval Lifecycle Sequence Diagram (`mermaid`) to `README.md`, `README_de.md`, and `ARCHITECTURE.md`.
+- Completed and enriched `## What It Does` section in `README.md` with detailed capabilities and value proposition.
+- Validated all Mermaid diagrams with `lint_mermaid.py` (0 syntax issues).
+- Synchronized `llms.txt` timestamp and architecture references.
+
 ## 2026-07-26
 
 - Discoverability, SEO & README Design Audit (Path B).

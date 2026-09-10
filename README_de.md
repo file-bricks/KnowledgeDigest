@@ -5,11 +5,13 @@
 **[English](README.md)** | [Deutsch](README_de.md)
 
 [![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/)
-[![Pytest 92 Passed](https://img.shields.io/badge/pytest-92%20bestanden-brightgreen.svg)](https://github.com/file-bricks/knowledgedigest)
+[![Tests 130 Bestanden](https://img.shields.io/badge/tests-130%20bestanden-brightgreen.svg)](https://github.com/file-bricks/knowledgedigest)
 [![Lizenz: MIT](https://img.shields.io/badge/Lizenz-MIT-yellow.svg)](LICENSE)
 [![SQLite FTS5](https://img.shields.io/badge/Suche-FTS5-green.svg)]()
 [![Local-First](https://img.shields.io/badge/Datenschutz-Local--First-blue.svg)]()
 [![LLM-Ready](https://img.shields.io/badge/LLM-Nativ-purple.svg)]()
+[![PySide6](https://img.shields.io/badge/GUI-PySide6-41CD52.svg?logo=qt&logoColor=white)]()
+[![Architektur](https://img.shields.io/badge/Doku-ARCHITECTURE.md-blue.svg)](ARCHITECTURE.md)
 
 > Portable, eigenständige Wissensdatenbank — indexiert Dokumente, chunked sie und macht sie über FTS5 durchsuchbar. Optionale LLM-Zusammenfassung. PySide6 Desktop-GUI + Web-Viewer.
 
@@ -49,6 +51,37 @@ flowchart TD
     FTS --> WEB
     FTS --> CLI
     FTS --> API
+```
+
+### Sequenzdiagramm: Ingestion & Retrieval Lebenszyklus
+
+```mermaid
+sequenceDiagram
+    autonumber
+    actor User as "Nutzer / KI-Agent"
+    participant CLI as "CLI / GUI / Web"
+    participant Core as "Digest Core"
+    participant Ingest as "Ingestor & Chunker"
+    participant DB as "SQLite (FTS5 & Triggers)"
+    participant LLM as "LLM Summarizer"
+
+    Note over User,DB: Phase 1: Ingestion & Indexierung
+    User->>CLI: "Verzeichnis indexieren (/pfad/zu/docs)"
+    CLI->>Core: "scan_directory(pfad)"
+    Core->>Ingest: "Text extrahieren & chunken (~350 Wörter)"
+    Ingest->>DB: "Metadaten, Chunks & Keywords speichern"
+    DB-->>DB: "Auto-Sync des BM25 FTS5-Index via Trigger"
+    opt "Optionale Zusammenfassung"
+        Core->>LLM: "Chunks in Warteschlange (Gemini Flash / Haiku)"
+        LLM-->>DB: "Strukturierte Summaries & Tags ablegen"
+    end
+    Core-->>CLI: "Indexierung erfolgreich abgeschlossen"
+
+    Note over User,DB: Phase 2: Schnelles Retrieval
+    User->>CLI: "Suchbegriff eingeben ('neuronale Netze')"
+    CLI->>DB: "FTS5 MATCH mit BM25-Relevanzranking"
+    DB-->>CLI: "Sortierte Treffer mit hervorgehobenen Snippets"
+    CLI-->>User: "Trefferliste & Dateivorschau anzeigen"
 ```
 
 ## Einstieg

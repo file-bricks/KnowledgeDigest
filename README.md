@@ -5,11 +5,13 @@
 **[Deutsch](README_de.md)** | [English](README.md)
 
 [![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/)
-[![Pytest 92 Passed](https://img.shields.io/badge/pytest-92%20passed-brightgreen.svg)](https://github.com/file-bricks/knowledgedigest)
+[![Tests 130 Passed](https://img.shields.io/badge/tests-130%20passed-brightgreen.svg)](https://github.com/file-bricks/knowledgedigest)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![SQLite FTS5](https://img.shields.io/badge/search-FTS5-green.svg)]()
 [![Local-First](https://img.shields.io/badge/privacy-local--first-blue.svg)]()
 [![LLM-Ready](https://img.shields.io/badge/LLM-Ready-purple.svg)]()
+[![PySide6](https://img.shields.io/badge/GUI-PySide6-41CD52.svg?logo=qt&logoColor=white)]()
+[![Architecture](https://img.shields.io/badge/docs-ARCHITECTURE.md-blue.svg)](ARCHITECTURE.md)
 
 > Portable, self-contained knowledge database — indexes documents, chunks them, and makes them searchable via FTS5. Optional LLM summarization. PySide6 GUI + Web Viewer.
 
@@ -71,8 +73,47 @@ flowchart TD
     FTS --> API
 ```
 
+### Sequence Diagram: Ingestion & Retrieval Lifecycle
+
+```mermaid
+sequenceDiagram
+    autonumber
+    actor User as "User / AI Agent"
+    participant CLI as "CLI / GUI / Web"
+    participant Core as "Digest Core"
+    participant Ingest as "Ingestor & Chunker"
+    participant DB as "SQLite (FTS5 & Triggers)"
+    participant LLM as "LLM Summarizer"
+
+    Note over User,DB: Phase 1: Ingestion & Indexing
+    User->>CLI: "Ingest directory (/path/to/docs)"
+    CLI->>Core: "scan_directory(path)"
+    Core->>Ingest: "Extract text & chunk (~350 words)"
+    Ingest->>DB: "Store metadata, chunks & keywords"
+    DB-->>DB: "Auto-sync BM25 FTS5 index via triggers"
+    opt "Optional Summarization"
+        Core->>LLM: "Queue chunks (Gemini Flash / Claude Haiku)"
+        LLM-->>DB: "Store structured summaries & domain tags"
+    end
+    Core-->>CLI: "Ingestion complete & indexed"
+
+    Note over User,DB: Phase 2: High-Speed Retrieval
+    User->>CLI: "Search query ('neural search')"
+    CLI->>DB: "FTS5 MATCH with BM25 snippet ranking"
+    DB-->>CLI: "Ranked results with highlighted snippets"
+    CLI-->>User: "Formatted search hits & previews"
+```
+
 ## What It Does
 
+KnowledgeDigest bridges the gap between chaotic local document stores and AI retrieval pipelines:
+
+- **Local Text Extraction**: Deep extraction from PDF (via `pdfplumber`), Microsoft Word (`.docx`), HTML, Markdown, and plain text files.
+- **Sentence-Bounded Chunking**: Intelligently chunks texts into ~350-word segments respecting grammatical sentence boundaries, eliminating disjointed mid-sentence cuts for LLM prompts.
+- **SQLite FTS5 BM25 Engine**: Instant full-text search with BM25 ranking, snippet highlighting, and zero external database dependencies.
+- **Asynchronous LLM Summaries**: High-speed batch processing for document chunks using Gemini Flash (`--flash`) or Anthropic Claude Haiku, providing structured key takeaways and tags.
+- **Dual Frontends & Headless Access**: Clean PySide6 dark-theme desktop application with document viewer and PDF preview, plus a zero-dependency Python stdlib Web Viewer (`http://localhost:8787`), CLI, and Python library.
+- **Offline & Privacy-First**: 100% of data remains on your local machine in a portable `data/knowledge.db` file without any cloud telemetry.
 
 ## Features
 

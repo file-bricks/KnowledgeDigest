@@ -78,6 +78,37 @@ knowledge.db
 Query via GUI / Web Viewer / CLI / Python API
 ```
 
+### Sequence Diagram: Ingestion & Retrieval Lifecycle
+
+```mermaid
+sequenceDiagram
+    autonumber
+    actor User as "User / AI Agent"
+    participant CLI as "CLI / GUI / Web"
+    participant Core as "Digest Core"
+    participant Ingest as "Ingestor & Chunker"
+    participant DB as "SQLite (FTS5 & Triggers)"
+    participant LLM as "LLM Summarizer"
+
+    Note over User,DB: Phase 1: Ingestion & Indexing
+    User->>CLI: "Ingest directory (/path/to/docs)"
+    CLI->>Core: "scan_directory(path)"
+    Core->>Ingest: "Extract text & chunk (~350 words)"
+    Ingest->>DB: "Store metadata, chunks & keywords"
+    DB-->>DB: "Auto-sync BM25 FTS5 index via triggers"
+    opt "Optional Summarization"
+        Core->>LLM: "Queue chunks (Gemini Flash / Claude Haiku)"
+        LLM-->>DB: "Store structured summaries & domain tags"
+    end
+    Core-->>CLI: "Ingestion complete & indexed"
+
+    Note over User,DB: Phase 2: High-Speed Retrieval
+    User->>CLI: "Search query ('neural search')"
+    CLI->>DB: "FTS5 MATCH with BM25 snippet ranking"
+    DB-->>CLI: "Ranked results with highlighted snippets"
+    CLI-->>User: "Formatted search hits & previews"
+```
+
 ## Database Schema
 
 Normalized multi-table schema with FTS5 full-text search:
