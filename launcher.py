@@ -75,11 +75,28 @@ def main():
     # Struktur sicherstellen
     ensure_structure(base)
 
-    # Sicherstellen dass das Paket importierbar ist
+    # Sicherstellen dass das Paket importierbar ist.
+    # Das Package liegt im Ordner ".db" (kein gueltiger Python-Name), wird aber
+    # als "KnowledgeDigest" importiert. Loesung: .db-Verzeichnis direkt importieren
+    # und unter dem Alias "KnowledgeDigest" in sys.modules registrieren.
     if str(base.parent) not in sys.path:
         sys.path.insert(0, str(base.parent))
     if str(base) not in sys.path:
         sys.path.insert(0, str(base))
+
+    # Alias: ".db"-Package als "KnowledgeDigest" im Import-System registrieren
+    import importlib.util
+    if "KnowledgeDigest" not in sys.modules:
+        spec = importlib.util.spec_from_file_location(
+            "KnowledgeDigest",
+            str(base / "__init__.py"),
+            submodule_search_locations=[str(base)],
+        )
+        pkg = importlib.util.module_from_spec(spec)
+        pkg.__path__ = [str(base)]
+        pkg.__package__ = "KnowledgeDigest"
+        sys.modules["KnowledgeDigest"] = pkg
+        spec.loader.exec_module(pkg)
 
     # GUI starten
     os.environ["PYTHONIOENCODING"] = "utf-8"
