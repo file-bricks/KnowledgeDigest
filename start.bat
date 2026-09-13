@@ -18,5 +18,7 @@ if errorlevel 1 (
 :: GUI starten
 cd ..
 echo Starte KnowledgeDigest GUI...
-python -m KnowledgeDigest --gui
+:: Ordnername .db ist kein gueltiger Python-Name - dort direkt ueber den
+:: Launcher starten, im normal benannten Klon ueber das Paket.
+if exist .db\launcher.py (python .db\launcher.py) else (python -m KnowledgeDigest --gui)
 if errorlevel 1 pause

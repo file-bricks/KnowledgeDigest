@@ -20,7 +20,12 @@ Author: Lukas Geiger
 License: MIT
 """
 
-from .digest import KnowledgeDigest
+try:
+    from .digest import KnowledgeDigest
+except ImportError:
+    # Ohne Paket-Kontext (z.B. wenn pytest __init__.py direkt importiert):
+    # KnowledgeDigest bleibt undefiniert; normaler Package-Import ist nicht betroffen.
+    pass  # type: ignore[assignment]
 
 __version__ = "0.4.0"
 __all__ = ["KnowledgeDigest"]

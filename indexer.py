@@ -14,15 +14,21 @@ Workflow:
     6. FTS5-Index wird automatisch via Trigger befuellt
 """
 
-__all__ = ["SkillIndexer"]
+__all__ = ["SkillIndexer", "import_bach_skills"]
 
 import sqlite3
 from pathlib import Path
-from typing import Dict, Optional, Any
+from typing import Dict, Optional, Any, Union
 
-from .schema import ensure_schema
-from .chunker import chunk_text, estimate_tokens
-from .utils import sha256_hash as _sha256, extract_keywords as _extract_keywords
+# Relative Imports (Paket-Kontext) mit Fallback auf absolute Imports (sys.path)
+try:
+    from .schema import ensure_schema
+    from .chunker import chunk_text, estimate_tokens
+    from .utils import sha256_hash as _sha256, extract_keywords as _extract_keywords
+except ImportError:
+    from schema import ensure_schema          # type: ignore[no-redef]
+    from chunker import chunk_text, estimate_tokens  # type: ignore[no-redef]
+    from utils import sha256_hash as _sha256, extract_keywords as _extract_keywords  # type: ignore[no-redef]
 
 
 class SkillIndexer:
@@ -261,3 +267,58 @@ class SkillIndexer:
             'by_type': {r['skill_type']: r['cnt'] for r in by_type},
             'by_category': {r['category']: r['cnt'] for r in by_category},
         }
+
+
+# ---------------------------------------------------------------------------
+# Standalone-API (kein Klassen-Overhead, für direkte Nutzung ohne Instanz)
+# ---------------------------------------------------------------------------
+
+def import_bach_skills(
+    bach_db_path: Union[str, Path, None],
+    knowledge_db_path: Union[str, Path],
+    *,
+    chunk_size: int = 350,
+    overlap: int = 0,
+    force: bool = False,
+) -> Dict[str, Any]:
+    """Importiert BACH-Skills aus bach.db in die knowledge.db.
+
+    Standalone-Funktion: läuft auch ohne echtes BACH graceful durch.
+
+    Gibt immer ein Dict zurück – kein Exception-Throw:
+    - ``{"available": False, "error": "..."}``  falls BACH nicht verfügbar
+    - ``{"available": True, "total_skills": N, ...}``  bei Erfolg
+
+    Args:
+        bach_db_path: Pfad zur BACH-Datenbank. ``None`` → sofortiges available=False.
+        knowledge_db_path: Pfad zur Ziel-knowledge.db (wird ggf. neu angelegt).
+        chunk_size: Wörter pro Chunk (Default: 350).
+        overlap: Overlap zwischen Chunks in Wörtern.
+        force: Wenn True, bestehenden Index komplett neu aufbauen.
+
+    Returns:
+        Dict mit ``"available"`` (bool) plus Statistiken oder Fehlerdetails.
+    """
+    if bach_db_path is None:
+        return {"available": False, "error": "Kein bach_db_path angegeben."}
+
+    path = Path(bach_db_path)
+    if not path.exists():
+        return {"available": False, "error": f"bach.db nicht gefunden: {path}"}
+
+    indexer = SkillIndexer(Path(knowledge_db_path))
+    try:
+        result = indexer.index_from_bach(
+            path, chunk_size=chunk_size, overlap=overlap, force=force
+        )
+        # index_from_bach gibt bei fehlendem Pfad selbst ein error-Dict zurück –
+        # wird hier als available=False weitergereicht.
+        if "error" in result:
+            return {"available": False, **result}
+        result["available"] = True
+        return result
+    except sqlite3.Error as exc:
+        # Z.B. wenn bach.db existiert, aber die skills-Tabelle fehlt.
+        return {"available": False, "error": f"SQLite-Fehler beim BACH-Import: {exc}"}
+    finally:
+        indexer.close()
