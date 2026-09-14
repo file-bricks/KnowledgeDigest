@@ -69,7 +69,7 @@ def ensure_structure(base: Path):
 
 def main():
     base = get_base_dir()
-    print(f"KnowledgeDigest Launcher")
+    print("KnowledgeDigest Launcher")
     print(f"Basis: {base}")
 
     # Struktur sicherstellen

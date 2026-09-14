@@ -77,3 +77,15 @@ LOCK*.txt
 # Host-spezifische README-Kopien (lokal)
 README-*Studio.md
 README_de-*Studio.md
+
+# Multi-Host Sync & Conflict Protection
+*-ASUS-GEI*
+*-WORKSTATION-LG*
+*.sync-conflict-*
+*.conflict
+
+# Test, Lint & Coverage Caches
+.pytest_cache/
+.ruff_cache/
+.coverage
+htmlcov/

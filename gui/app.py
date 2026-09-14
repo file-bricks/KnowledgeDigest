@@ -8,7 +8,6 @@ import sys
 from pathlib import Path
 from PySide6.QtWidgets import QApplication
 from PySide6.QtGui import QPalette, QColor, QIcon
-from PySide6.QtCore import Qt
 
 
 def _apply_dark_palette(app: QApplication):

@@ -15,6 +15,7 @@ import os
 import sys
 import json
 import html
+import shutil
 import sqlite3
 import argparse
 import webbrowser
@@ -567,8 +568,6 @@ class ViewerHandler(BaseHTTPRequestHandler):
         try:
             doc = conn.execute("SELECT file_path FROM documents WHERE id=?", (doc_id,)).fetchone()
             if doc:
-                import shutil, os
-                from pathlib import Path
                 file_path = doc['file_path']
                 trash_dir = Path(self.db_path).parent / "_Papierkorb"
                 trash_dir.mkdir(parents=True, exist_ok=True)

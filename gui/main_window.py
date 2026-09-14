@@ -5,18 +5,16 @@ KnowledgeDigest -- Main Window.
 Adaptiert von LitZentrum (main_window.py) + DokuZentrum (main_window.py).
 """
 
-import os
 import threading
-from pathlib import Path
 
 from PySide6.QtWidgets import (
     QMainWindow, QSplitter, QToolBar, QStatusBar,
     QFileDialog, QMessageBox, QLabel
 )
-from PySide6.QtCore import Qt, QSize, QTimer
+from PySide6.QtCore import Qt, QSize
 from PySide6.QtGui import QAction
 
-from .event_bus import EventBus, EventType, get_event_bus
+from .event_bus import EventType, get_event_bus
 from .panels.directory_panel import DirectoryPanel
 from .panels.document_list import DocumentListPanel
 from .panels.preview_panel import PreviewPanel

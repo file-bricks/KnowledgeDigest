@@ -2,7 +2,29 @@
 
 ## [Unreleased]
 
-## 2026-09-10
+## 2026-09-14
+
+- **Repository Hygiene & Critical Scoping Fix (Pfad A)**:
+  - Fixed `F823 UnboundLocalError` on `Path` in `digest.py` caused by inner import shadowing module-level variable in CLI `dups` command.
+  - Resolved 24 code and import warnings across `digest.py`, `web_viewer.py`, `chunker.py`, `gemini_flash_summarizer.py`, `summarizer.py`, `launcher.py`, `gui/app.py`, `gui/main_window.py`, `gui/panels/document_list.py`, `gui/widgets/search_bar.py`, and test suites. `ruff check .` now passes with 0 issues.
+- **Packaging & PEP 621 Standardization**:
+  - Upgraded `pyproject.toml` with PEP 621 compliant metadata, `license = { text = "MIT" }`, Python 3.13 and OS classifiers.
+  - Added grouped optional dependencies (`extract`, `gui`, `llm`, `test`, `all`).
+  - Expanded `[project.urls]` with canonical links to Documentation, Architecture, Changelog, Security Policy, Parent Organization (`file-bricks`), and Umbrella Ecosystem (`open-bricks`).
+  - Configured pytest default options (`addopts = "-ra -v"`).
+- **CI Matrix Hardening (`.github/workflows/tests.yml`)**:
+  - Replaced invalid action versions with official `actions/checkout@v4` and `actions/setup-python@v5`.
+  - Added workflow-level `concurrency` with `cancel-in-progress: true` to prevent duplicate CI runs.
+  - Added 15-minute job timeout and expanded Python test matrix to `["3.10", "3.11", "3.12", "3.13"]`.
+- **Git & Multi-Host Sync Hygiene**:
+  - Added `.gitignore` patterns for multi-host conflict artifacts (`*-ASUS-GEI*`, `*-WORKSTATION-LG*`, `*.sync-conflict-*`, `*.conflict`) and testing/linting caches (`.pytest_cache/`, `.ruff_cache/`, `.coverage`).
+- **Security Policy Hardening**:
+  - Updated `SECURITY.md` with supported versions table (0.4.x active support), response SLAs (48h acknowledgement, 5 business days triage), and local-first zero-egress invariants.
+- **Contract Test Suite Expansion**:
+  - Added `tests/test_metadata.py` with 8 automated contract tests covering PEP 621 structure, version parity, manifest integrity, bytecode compilation across all files, security policy clauses, CI workflow guardrails, and banner preservation (`HOOK-BANNER-ASSET-01`). Total test suite expanded to 148 passed tests.
+- **Documentation & Badges**:
+  - Synchronized test badges in `README.md` and `README_de.md` to 148 passed.
+  - Refreshed `llms.txt` timestamp to 2026-09-14.
 
 - Discoverability, Design & Architecture Enhancement (Path B).
 - Updated test badges to 130 passed tests, added PySide6 and Architecture badges.

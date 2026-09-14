@@ -1,0 +1,29 @@
+# MARKETING-LOG.txt — KnowledgeDigest
+# Chronologisches Log fuer Repository-Pflege, Hygiene (Pfad A) und Sichtbarkeit/Marketing (Pfad B)
+
+2026-09-14 (Pfad A, Gemini Antigravity, commit pending)
+- Scope: Repository-Hygiene, CI-Matrix-Haertung, PEP 621 Metadaten und Vertragstest-Erweiterung (Pfad A).
+- Kritischer Fix: F823 UnboundLocalError auf 'Path' in digest.py behoben (innere Import-Verschachtelung in CLI 'dups').
+- Code-Hygiene: 24 Lint- und Import-Warnungen beseitigt; ruff check . meldet 0 Fehler.
+- PEP 621: pyproject.toml vollstaendig standardisiert mit license = { text = "MIT" }, Python 3.13 und OS-Klassifikatoren, optional-dependencies (extract, gui, llm, test, all) und kanonischen project.urls.
+- CI: .github/workflows/tests.yml gehaertet mit offiziellen Actions (checkout@v4, setup-python@v5), Workflow-Concurrency (cancel-in-progress), Job-Timeout (15 min) und Python 3.13 Matrix-Erweiterung.
+- Git & Sync: .gitignore erweitert um Multi-Host-Konfliktmuster und Test/Lint-Caches.
+- Security: SECURITY.md aktualisiert mit SLA-Reaktionszeiten (48h/5 Tage) und Local-First / Zero-Egress Garantien.
+- Tests: tests/test_metadata.py mit 8 Vertragstests hinzugefuegt (148/148 Tests bestanden).
+- Doku: Test-Badges in README.md / README_de.md auf 148 Tests synchronisiert, llms.txt aktualisiert.
+
+2026-09-10 (Pfad B, Gemini Antigravity, commit 8ff1ef4)
+- Scope: Discoverability, Design & Architecture Enhancement (Pfad B).
+- Badges: Pytest 130 passed, PySide6, Architecture.
+- Sequence Diagram: Ingestion & Retrieval Lifecycle Sequence Diagram in README.md, README_de.md, ARCHITECTURE.md.
+- llms.txt aktualisiert auf 2026-09-10.
+
+2026-07-26 (Pfad B, Codex)
+- Scope: Discoverability, SEO & README Design Audit.
+- Badges & Mermaid-Systemarchitektur integriert.
+- llms.txt aktualisiert auf 2026-07-26.
+
+2026-07-25 (Pfad A, Codex)
+- Scope: Technische Hygiene & Security Audit.
+- Web Viewer POST-only Haertung und FTS5 HTML-Escaping.
+- Tests erweitert auf 92 passed.

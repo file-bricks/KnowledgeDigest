@@ -15,7 +15,7 @@ Strategie:
 __all__ = ["chunk_text", "split_frontmatter", "estimate_tokens"]
 
 import re
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import List, Tuple, Optional
 
 # Chunk-Konfiguration

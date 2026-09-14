@@ -105,7 +105,6 @@ class DocumentListPanel(QWidget):
         self._docs = []
 
         try:
-            from ..config import get_config
             from ..schema import ensure_schema
             conn = ensure_schema(self._kd.db_path)
 

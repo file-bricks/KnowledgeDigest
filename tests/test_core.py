@@ -6,7 +6,6 @@ Testet: chunker.py, schema.py, config.py, utils.py
 Keine GUI-, API- oder LLM-Tests.
 """
 
-import json
 import sqlite3
 import sys
 import tempfile
@@ -14,8 +13,6 @@ from pathlib import Path
 
 # Modulpfad einfuegen (tests/ ist ein Unterordner von KnowledgeDigest/)
 sys.path.insert(0, str(Path(__file__).parent.parent))
-
-import pytest
 
 from chunker import chunk_text, split_frontmatter, estimate_tokens, Chunk
 from schema import ensure_schema, get_schema_version, SCHEMA_VERSION
@@ -237,7 +234,7 @@ class TestChunkText:
         text = "---\nname: test\n---\n\nBody text hier."
         chunks_with = chunk_text(text, separate_frontmatter=True)
         chunks_without = chunk_text(text, separate_frontmatter=False)
-        # Ohne separate_frontmatter: kein Chunk mit is_frontmatter=True
+        assert any(c.is_frontmatter for c in chunks_with)
         assert not any(c.is_frontmatter for c in chunks_without)
 
 

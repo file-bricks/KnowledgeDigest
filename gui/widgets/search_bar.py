@@ -5,7 +5,6 @@ FTS5-Suchleiste fuer die Toolbar.
 """
 
 from PySide6.QtWidgets import QLineEdit
-from PySide6.QtCore import Qt
 
 from ..event_bus import EventType, get_event_bus
 

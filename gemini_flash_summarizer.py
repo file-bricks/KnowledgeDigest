@@ -20,7 +20,6 @@ import os
 import sqlite3
 import time
 from pathlib import Path
-from datetime import datetime
 from typing import Dict, List, Optional, Any
 
 try:
@@ -232,7 +231,7 @@ class GeminiFlashSummarizer:
             
             if raw_text.startswith('```'):
                 lines = raw_text.split('\n')
-                json_lines = [l for l in lines if not l.startswith('```')]
+                json_lines = [line for line in lines if not line.startswith('```')]
                 raw_text = '\n'.join(json_lines)
 
             data = json.loads(raw_text)

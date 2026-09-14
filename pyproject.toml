@@ -8,7 +8,7 @@ version = "0.4.0"
 description = "Portable local knowledge database with FTS5 search, chunking, desktop GUI, and web viewer."
 readme = "README.md"
 requires-python = ">=3.10"
-license = "MIT"
+license = { text = "MIT" }
 authors = [
   { name = "Lukas Geiger" }
 ]
@@ -20,14 +20,56 @@ classifiers = [
   "Programming Language :: Python :: 3.10",
   "Programming Language :: Python :: 3.11",
   "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
+  "License :: OSI Approved :: MIT License",
+  "Operating System :: OS Independent",
+  "Operating System :: Microsoft :: Windows",
+  "Operating System :: POSIX :: Linux",
+  "Operating System :: MacOS",
   "Topic :: Desktop Environment",
   "Topic :: Text Processing :: Indexing"
+]
+
+[project.optional-dependencies]
+extract = [
+  "pdfplumber>=0.10.0",
+  "PyPDF2>=3.0.0",
+  "python-docx>=1.0.0",
+  "beautifulsoup4>=4.12.0"
+]
+gui = [
+  "PySide6>=6.6.0",
+  "pypdfium2>=4.30.0"
+]
+llm = [
+  "anthropic>=0.79.0",
+  "google-genai>=1.0.0"
+]
+test = [
+  "pytest>=8.0.0"
+]
+all = [
+  "pdfplumber>=0.10.0",
+  "PyPDF2>=3.0.0",
+  "python-docx>=1.0.0",
+  "beautifulsoup4>=4.12.0",
+  "PySide6>=6.6.0",
+  "pypdfium2>=4.30.0",
+  "anthropic>=0.79.0",
+  "google-genai>=1.0.0",
+  "pytest>=8.0.0"
 ]
 
 [project.urls]
 Homepage = "https://github.com/file-bricks/knowledgedigest"
 Repository = "https://github.com/file-bricks/knowledgedigest"
 Issues = "https://github.com/file-bricks/knowledgedigest/issues"
+Documentation = "https://github.com/file-bricks/knowledgedigest/blob/main/README.md"
+Architecture = "https://github.com/file-bricks/knowledgedigest/blob/main/ARCHITECTURE.md"
+Changelog = "https://github.com/file-bricks/knowledgedigest/blob/main/CHANGELOG.md"
+Security = "https://github.com/file-bricks/knowledgedigest/blob/main/SECURITY.md"
+"Parent Organization" = "https://github.com/file-bricks"
+"Umbrella Ecosystem" = "https://github.com/open-bricks"
 
 [project.scripts]
 knowledgedigest = "KnowledgeDigest.digest:main"
@@ -47,3 +89,4 @@ KnowledgeDigest = "."
 [tool.pytest.ini_options]
 pythonpath = "."
 testpaths = ["tests"]
+addopts = "-ra -v"

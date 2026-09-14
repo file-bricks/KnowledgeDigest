@@ -20,8 +20,6 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 from indexer import import_bach_skills      # noqa: E402
 from wiki_indexer import import_bach_wikis  # noqa: E402
 
-import pytest  # noqa: E402
-
 
 # ---------------------------------------------------------------------------
 # Hilfsfunktionen: Minimale synthetische bach.db erzeugen

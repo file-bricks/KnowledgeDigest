@@ -41,7 +41,6 @@ import time
 import urllib.request
 import urllib.error
 from pathlib import Path
-from datetime import datetime
 from typing import Dict, List, Optional, Any, Callable
 
 from .schema import ensure_schema
@@ -350,7 +349,7 @@ class Summarizer:
             # JSON extrahieren (auch wenn in Markdown eingebettet)
             if raw_text.startswith('```'):
                 lines = raw_text.split('\n')
-                json_lines = [l for l in lines if not l.startswith('```')]
+                json_lines = [line for line in lines if not line.startswith('```')]
                 raw_text = '\n'.join(json_lines)
 
             # JSON-Block aus Text extrahieren falls noetig

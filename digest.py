@@ -29,6 +29,8 @@ from typing import List, Dict, Optional, Any
 
 from .schema import ensure_schema
 from .config import get_config, Config
+from .ingestor import DocumentIngestor
+from .summarizer import Summarizer
 
 # Lazy imports fuer optionale Module
 _SkillIndexer = None
@@ -49,10 +51,6 @@ def _get_wiki_indexer():
         from .wiki_indexer import WikiIndexer
         _WikiIndexer = WikiIndexer
     return _WikiIndexer
-
-
-from .ingestor import DocumentIngestor
-from .summarizer import Summarizer
 
 
 class KnowledgeDigest:
@@ -963,7 +961,6 @@ def main():
     """CLI-Entrypoint fuer Standalone-Nutzung."""
     import argparse
     import json
-    import sys
 
     parser = argparse.ArgumentParser(
         description="KnowledgeDigest -- Wissensdatenbank mit LLM-Summarization",
@@ -1308,8 +1305,8 @@ Status:
                 print("Keine Duplikate gefunden!")
             else:
                 print(f"{len(dups)} Gruppen von Duplikaten gefunden.\n")
-                import shutil, os
-                from pathlib import Path
+                import shutil
+                import os
                 trash_dir = kd.db_path.parent / "_Papierkorb"
                 trash_dir.mkdir(parents=True, exist_ok=True)
                 

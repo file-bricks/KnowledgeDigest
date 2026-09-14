@@ -5,7 +5,7 @@
 **[English](README.md)** | [Deutsch](README_de.md)
 
 [![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/)
-[![Tests 130 Bestanden](https://img.shields.io/badge/tests-130%20bestanden-brightgreen.svg)](https://github.com/file-bricks/knowledgedigest)
+[![Tests 148 Bestanden](https://img.shields.io/badge/tests-148%20bestanden-brightgreen.svg)](https://github.com/file-bricks/knowledgedigest)
 [![Lizenz: MIT](https://img.shields.io/badge/Lizenz-MIT-yellow.svg)](LICENSE)
 [![SQLite FTS5](https://img.shields.io/badge/Suche-FTS5-green.svg)]()
 [![Local-First](https://img.shields.io/badge/Datenschutz-Local--First-blue.svg)]()
