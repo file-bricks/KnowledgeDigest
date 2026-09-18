@@ -276,7 +276,7 @@ class TestSchema:
             db_path.unlink(missing_ok=True)
 
     def test_schema_version_constant(self):
-        assert SCHEMA_VERSION == 3
+        assert SCHEMA_VERSION == 4
 
     def test_get_schema_version_nonexistent(self, tmp_path):
         # Datei existiert nicht -> Version 0

@@ -21,7 +21,7 @@ __all__ = ["SCHEMA_SQL", "SCHEMA_VERSION", "ensure_schema", "get_schema_version"
 import sqlite3
 from pathlib import Path
 
-SCHEMA_VERSION = 3
+SCHEMA_VERSION = 4
 
 SCHEMA_SQL = """
 -- ========================================================================
@@ -250,6 +250,31 @@ CREATE TABLE IF NOT EXISTS digest_queue (
 );
 
 -- ========================================================================
+-- CHUNK TRANSIT & WORK COORDINATION (Cross-System Sync)
+-- ========================================================================
+
+CREATE TABLE IF NOT EXISTS chunk_tasks (
+    chunk_key TEXT PRIMARY KEY,
+    source_type TEXT NOT NULL,
+    canonical_id TEXT NOT NULL,
+    content_version TEXT NOT NULL,
+    chunk_index INTEGER NOT NULL,
+    status TEXT NOT NULL DEFAULT 'pending',
+    claimed_by_node TEXT,
+    claimed_by_agent TEXT,
+    claimed_at TIMESTAMP,
+    lease_expires_at TIMESTAMP,
+    heartbeat_at TIMESTAMP,
+    summary TEXT,
+    keywords TEXT,
+    domain TEXT,
+    model TEXT,
+    error_msg TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- ========================================================================
 -- META
 -- ========================================================================
 
@@ -291,6 +316,11 @@ CREATE INDEX IF NOT EXISTS idx_summary_source ON summaries(source_type, source_i
 -- Queue
 CREATE INDEX IF NOT EXISTS idx_queue_status ON digest_queue(status);
 CREATE INDEX IF NOT EXISTS idx_queue_source ON digest_queue(source_type, source_id);
+
+-- Chunk Tasks
+CREATE INDEX IF NOT EXISTS idx_chunk_tasks_status ON chunk_tasks(status);
+CREATE INDEX IF NOT EXISTS idx_chunk_tasks_lease ON chunk_tasks(status, lease_expires_at);
+CREATE INDEX IF NOT EXISTS idx_chunk_tasks_source ON chunk_tasks(source_type, canonical_id);
 """
 
 
