@@ -148,3 +148,93 @@ def test_banner_and_asset_guardrail():
     readme_text = (REPO_ROOT / "README.md").read_text(encoding="utf-8")
     banner_matches = re.findall(r'(?:<img[^>]+banner|\!\[[^\]]*banner[^\]]*\])', readme_text, re.IGNORECASE)
     assert len(banner_matches) == 1, f"Expected exactly 1 banner in README.md, found {len(banner_matches)}"
+
+
+def test_canonical_notice_attribution():
+    """Verify canonical NOTICE file exists and attributes Lukas Geiger, file-bricks, and open-bricks."""
+    notice_file = REPO_ROOT / "NOTICE"
+    assert notice_file.is_file(), "NOTICE file must exist in repo root"
+    content = notice_file.read_text(encoding="utf-8")
+    assert "KnowledgeDigest" in content
+    assert "Lukas Geiger" in content
+    assert "file-bricks" in content
+    assert "open-bricks" in content
+    assert "MIT License" in content
+
+
+def test_level1_sbom_and_invariants():
+    """Verify THIRD_PARTY_LICENSES.md exists, lists Level 1 SBOM, RunAsInvoker, and all 10 invariants."""
+    sbom_file = REPO_ROOT / "THIRD_PARTY_LICENSES.md"
+    assert sbom_file.is_file(), "THIRD_PARTY_LICENSES.md must exist in repo root"
+    content = sbom_file.read_text(encoding="utf-8")
+    assert "Level 1 SBOM Inventory" in content
+    assert "RunAsInvoker" in content
+    assert "Zero-Copyleft Guarantee" in content
+    assert "pypdfium2" in content
+    assert "PySide6" in content
+    expected_invariants = [
+        "INV-LOCAL-01", "INV-SQLITE-02", "INV-CHUNK-03", "INV-COPYLEFT-04",
+        "INV-RUNAS-05", "INV-DUAL-06", "INV-OPTLLM-07", "INV-DEDUPE-08",
+        "INV-DOCS-09", "INV-SLA-10"
+    ]
+    for inv in expected_invariants:
+        assert inv in content, f"Expected invariant {inv} in THIRD_PARTY_LICENSES.md"
+
+
+def test_pyproject_version_freeze_and_license_files():
+    """Verify PEP 621 version is strictly frozen at 0.4.0 (T-20260920-167562623) and license-files configured."""
+    pyproject_file = REPO_ROOT / "pyproject.toml"
+    content = pyproject_file.read_text(encoding="utf-8")
+    assert 'version = "0.4.0"' in content, "Path B runs must NEVER bump version (T-20260920-167562623)"
+    assert 'license-files = ["LICENSE", "NOTICE", "THIRD_PARTY_LICENSES.md"]' in content
+    assert "Notice" in content
+    assert "Third-Party Licenses" in content
+    assert "Marketing Log" in content
+    assert "LLM Ready" in content
+    assert "basetemp=.pytest_tmp" in content
+
+
+def test_bilingual_navigation_parity_18_points():
+    """Verify README.md and README_de.md maintain exact 18-point dual-anchor navigation parity."""
+    en_readme = (REPO_ROOT / "README.md").read_text(encoding="utf-8")
+    de_readme = (REPO_ROOT / "README_de.md").read_text(encoding="utf-8")
+
+    for i in range(1, 19):
+        anchor = f'<a id="sec-{i:02d}"></a>'
+        assert anchor in en_readme, f"Missing {anchor} in README.md"
+        assert anchor in de_readme, f"Missing {anchor} in README_de.md"
+
+
+def test_target_personas_and_comparison_matrix():
+    """Verify both documentation files feature personas [PERSONA-01] to [PERSONA-04] and comparison matrix."""
+    en_readme = (REPO_ROOT / "README.md").read_text(encoding="utf-8")
+    de_readme = (REPO_ROOT / "README_de.md").read_text(encoding="utf-8")
+
+    for p in ["PERSONA-01", "PERSONA-02", "PERSONA-03", "PERSONA-04"]:
+        assert p in en_readme, f"Expected {p} in README.md"
+        assert p in de_readme, f"Expected {p} in README_de.md"
+
+    assert "INV-LOCAL-01" in en_readme
+    assert "INV-LOCAL-01" in de_readme
+
+
+def test_statutory_disclaimer_and_sla():
+    """Verify § 521 BGB statutory disclaimer and 48-hour response SLA across documentation and security policy."""
+    en_readme = (REPO_ROOT / "README.md").read_text(encoding="utf-8")
+    de_readme = (REPO_ROOT / "README_de.md").read_text(encoding="utf-8")
+    sec_policy = (REPO_ROOT / "SECURITY.md").read_text(encoding="utf-8")
+
+    assert "521 BGB" in en_readme
+    assert "521 BGB" in de_readme
+    assert "48" in en_readme
+    assert "48" in de_readme
+    assert "48 hours" in sec_policy or "48" in sec_policy
+
+
+def test_marketing_log_recency():
+    """Verify MARKETING-LOG.txt contains a recent Pfad B entry."""
+    log_file = REPO_ROOT / "MARKETING-LOG.txt"
+    assert log_file.is_file(), "MARKETING-LOG.txt must exist"
+    content = log_file.read_text(encoding="utf-8")
+    assert "2026-09-22" in content
+    assert "Pfad B" in content

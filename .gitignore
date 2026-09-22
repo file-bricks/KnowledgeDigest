@@ -72,20 +72,40 @@ scripts/patch_webviewer.py
 scripts/process_summaries.py
 
 # Multi-Agent Lock-System (lokal, nie committen)
+LOCK
+LOCK.*
 LOCK*.txt
+LOCK.user.*
+LOCK.until.*
+LOCK.condition.*
+LOCK.permissions.json
+.automation-lock
+uv.lock
+!package-lock.json
 
 # Host-spezifische README-Kopien (lokal)
 README-*Studio.md
 README_de-*Studio.md
 
 # Multi-Host Sync & Conflict Protection
-*-ASUS-GEI*
+*conflicted copy*
+* (Kopie)*
+* (Copy)*
+*-WORKSTATION*
 *-WORKSTATION-LG*
+*-ASUS*
+*-ASUS-GEI*
+*-LAPTOP*
+*-Mac Studio*
+*-MacBook*
 *.sync-conflict-*
 *.conflict
+*.orig
+*.rej
 
 # Test, Lint & Coverage Caches
 .pytest_cache/
+.pytest_tmp/
 .ruff_cache/
 .coverage
 htmlcov/

@@ -1,29 +1,52 @@
-## Last-checked: 2026-09-14
+## Last-checked: 2026-09-22
 
 # KnowledgeDigest
 
-KnowledgeDigest is a local-first Python tool for indexing documents into a portable SQLite/FTS5 knowledge database. It supports chunking, full-text search, optional LLM summaries, a PySide6 desktop GUI, a stdlib web viewer, CLI commands, and a Python API.
+KnowledgeDigest is a local-first Python tool for indexing documents into a portable SQLite/FTS5 knowledge database. It supports sentence-bounded semantic chunking (~350 words), full-text search with BM25 ranking, optional LLM summaries (Gemini Flash / Claude Haiku), a PySide6 desktop GUI, a stdlib web viewer, CLI commands, and a Python API.
 
 Canonical repository: https://github.com/file-bricks/knowledgedigest
+Parent Organization: https://github.com/file-bricks
+Umbrella Ecosystem: https://github.com/open-bricks
+Author: Lukas Geiger (https://github.com/lukisch)
+License: MIT License (https://github.com/file-bricks/knowledgedigest/blob/main/LICENSE)
+Attribution: NOTICE (https://github.com/file-bricks/knowledgedigest/blob/main/NOTICE)
+Level 1 SBOM: THIRD_PARTY_LICENSES.md (https://github.com/file-bricks/knowledgedigest/blob/main/THIRD_PARTY_LICENSES.md)
 
 ## Useful Entry Points
 
-- `README.md`: user-facing overview, installation, commands, and feature summary.
+- `README.md`: user-facing overview, 18-point dual-anchor navigation, installation, commands, and feature summary.
+- `README_de.md`: German documentation with reciprocal 18-point navigation parity.
 - `ARCHITECTURE.md`: module map, data flow, schema overview, and design decisions.
+- `THIRD_PARTY_LICENSES.md`: Level 1 SBOM inventory, runtime invariants (INV-LOCAL-01..INV-SLA-10), RunAsInvoker unprivileged execution, and Zero-Copyleft isolation guarantee.
+- `SECURITY.md`: local-first invariants, vulnerability reporting, and 48-hour response SLA.
 - `digest.py`: high-level API and CLI command implementation.
-- `web_viewer.py`: local browser viewer without external web framework dependencies.
-- `gui/`: PySide6 desktop interface.
-- `tests/test_core.py`: focused regression tests for core modules.
+- `web_viewer.py`: local browser viewer without external web framework dependencies (`http://localhost:8787`).
+- `gui/`: PySide6 desktop interface with dark theme and 3-panel layout.
+- `tests/test_metadata.py`: automated contract tests for PEP 621, SBOM invariants, and documentation parity.
+- `tests/test_no_agpl.py`: contract test enforcing zero-copyleft and prohibiting AGPL libraries (Decision E08).
 
 ## Run And Test
 
 ```bash
 python -m pip install -e .
-python -m pytest tests -q
+python -m pytest
 python -m KnowledgeDigest status
 ```
 
 Runtime data is local and ignored by Git: `data/`, `*.db`, and `knowledgedigest.json`.
+
+## Governance & Runtime Invariants
+
+- `INV-LOCAL-01`: Local-First & Zero Egress (all document parsing and SQLite queries run locally).
+- `INV-SQLITE-02`: ACID SQLite FTS5 Full-Text Search Engine with BM25 snippet ranking.
+- `INV-CHUNK-03`: Sentence-Bounded Semantic Chunking (~350 words, preserving grammatical clauses).
+- `INV-COPYLEFT-04`: Zero-Copyleft MIT Guarantee (`pypdfium2` over PyMuPDF, dynamically linked PySide6).
+- `INV-RUNAS-05`: Unprivileged User Mode (`RunAsInvoker`, no administrative elevation required).
+- `INV-DUAL-06`: Dual Frontends (PySide6 Native Desktop GUI + Stdlib Web Viewer on localhost:8787).
+- `INV-OPTLLM-07`: Optional Asynchronous LLM Integration (fully operational offline without LLM).
+- `INV-DEDUPE-08`: Cryptographic SHA-256 Deduplication with non-destructive `_Papierkorb` quarantine.
+- `INV-DOCS-09`: 100% Bilingual Documentation Parity (18-point reciprocal dual HTML anchors).
+- `INV-SLA-10`: Statutory Disclaimer (§ 521 BGB Gefälligkeitsrecht) & 48-hour security response SLA.
 
 ## Audience
 
@@ -47,4 +70,7 @@ file-bricks knowledgedigest
 desktop document search offline-first
 local-first AI RAG database sqlite
 knowledge base desktop GUI Python
+sentence bounded text chunking python
+zero egress document indexing
+sqlite fts5 bm25 full text search
 ```

@@ -9,10 +9,32 @@ description = "Portable local knowledge database with FTS5 search, chunking, des
 readme = "README.md"
 requires-python = ">=3.10"
 license = { text = "MIT" }
+license-files = ["LICENSE", "NOTICE", "THIRD_PARTY_LICENSES.md"]
 authors = [
   { name = "Lukas Geiger" }
 ]
-keywords = ["knowledge-base", "fts5", "sqlite", "document-search", "local-first"]
+keywords = [
+  "knowledge-base",
+  "fts5",
+  "sqlite",
+  "document-search",
+  "local-first",
+  "offline-first",
+  "document-indexing",
+  "document-processing",
+  "pdf-indexer",
+  "summarization",
+  "privacy-first",
+  "zero-egress",
+  "desktop-app",
+  "pyside6",
+  "python",
+  "ai",
+  "llm",
+  "python-package",
+  "file-bricks",
+  "open-bricks"
+]
 classifiers = [
   "Development Status :: 4 - Beta",
   "Intended Audience :: End Users/Desktop",
@@ -64,10 +86,15 @@ all = [
 Homepage = "https://github.com/file-bricks/knowledgedigest"
 Repository = "https://github.com/file-bricks/knowledgedigest"
 Issues = "https://github.com/file-bricks/knowledgedigest/issues"
+"Bug Tracker" = "https://github.com/file-bricks/knowledgedigest/issues"
 Documentation = "https://github.com/file-bricks/knowledgedigest/blob/main/README.md"
 Architecture = "https://github.com/file-bricks/knowledgedigest/blob/main/ARCHITECTURE.md"
 Changelog = "https://github.com/file-bricks/knowledgedigest/blob/main/CHANGELOG.md"
 Security = "https://github.com/file-bricks/knowledgedigest/blob/main/SECURITY.md"
+Notice = "https://github.com/file-bricks/knowledgedigest/blob/main/NOTICE"
+"Third-Party Licenses" = "https://github.com/file-bricks/knowledgedigest/blob/main/THIRD_PARTY_LICENSES.md"
+"Marketing Log" = "https://github.com/file-bricks/knowledgedigest/blob/main/MARKETING-LOG.txt"
+"LLM Ready" = "https://github.com/file-bricks/knowledgedigest/blob/main/llms.txt"
 "Parent Organization" = "https://github.com/file-bricks"
 "Umbrella Ecosystem" = "https://github.com/open-bricks"
 
@@ -87,6 +114,12 @@ packages = [
 KnowledgeDigest = "."
 
 [tool.pytest.ini_options]
+minversion = "7.0"
 pythonpath = "."
 testpaths = ["tests"]
-addopts = "-ra -v"
+addopts = "-ra -q --basetemp=.pytest_tmp"
+norecursedirs = [".git", ".pytest_cache", ".pytest_tmp", "__pycache__", "build", "dist", ".venv", "venv"]
+
+[tool.ruff]
+line-length = 120
+target-version = "py310"

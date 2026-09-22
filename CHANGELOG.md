@@ -2,6 +2,17 @@
 
 ## [Unreleased]
 
+- **Discoverability, Visual Architecture & Level 1 SBOM (Pfad B, 2026-09-22)**:
+  - **18-Point Bilingual Navigation Parity**: Implemented 18-point dual-anchor navigation parity (`<a id="sec-01"></a>`...`<a id="sec-18"></a>`) across `README.md` and `README_de.md` with reciprocal dual anchors for backward compatibility.
+  - **Target Personas & SEO Discovery**: Added explicit persona profiles (`[PERSONA-01]` to `[PERSONA-04]`) with high-intent search queries for AI engineers, researchers, compliance officers, and automation builders.
+  - **Comprehensive 10-Dimension Comparison Matrix**: Integrated comparison matrix benchmarking KnowledgeDigest against cloud SaaS (Notion AI, Glean), heavy vector databases (Pinecone, Chroma), desktop search (Everything, Spotlight), and ad-hoc scripts.
+  - **Level 1 SBOM & Governance Invariants**: Created canonical `NOTICE` attribution and `THIRD_PARTY_LICENSES.md` documenting direct dependencies, 10 runtime invariants (`INV-LOCAL-01` to `INV-SLA-10`), and unprivileged user mode (`RunAsInvoker`).
+  - **Zero-Copyleft Isolation Guarantee**: Reaffirmed Decision E08 isolating distribution from AGPL copyleft through `pypdfium2` (Apache-2.0 / BSD-3-Clause) and dynamically linked PySide6 (LGPL-3.0).
+  - **Statutory Disclaimer & Security SLA**: Embedded German statutory gift disclaimer (§ 521 BGB Gefälligkeitsrecht) and 48-hour initial response SLA into Section 18 of both documentation files.
+  - **GitHub Topics & Metadata**: Saturated 20/20 topics on GitHub and synced 20 keywords in `pyproject.toml`. Expanded `[project.urls]` with Notice, Third-Party Licenses, Marketing Log, LLM Ready, and Bug Tracker.
+  - **Windows Pytest Hardening**: Configured `addopts = "-ra -q --basetemp=.pytest_tmp"` in `pyproject.toml` to prevent Windows symlink temp file collisions (`[WinError 5]`), and updated `.gitignore` for multi-host and lock defense.
+  - **Contract Test Suite Expansion**: Added comprehensive metadata contract tests in `tests/test_metadata.py` verifying NOTICE, Level 1 SBOM, 18-point bilingual navigation, version freeze at `0.4.0` (T-20260920-167562623), and § 521 BGB / 48h SLA clauses.
+
 ## 2026-09-14
 
 - **Repository Hygiene & Critical Scoping Fix (Pfad A)**:

@@ -11,10 +11,8 @@ Covers the 6 acceptance criteria specified in T-20260727-05:
 6. New content versions produce independent chunk versions.
 """
 
-import sqlite3
-import tempfile
-from datetime import datetime, timezone, timedelta
-from pathlib import Path
+
+from datetime import timedelta
 
 import pytest
 from sqlite_transit_sync import SyncError
@@ -322,7 +320,6 @@ def test_t05_secret_negative_test_and_quick_check(transit_environment):
     conn_a = env["node_a"]["conn"]
     sync_a = env["node_a"]["sync"]
     conn_b = env["node_b"]["conn"]
-    sync_b = env["node_b"]["sync"]
 
     # Verify PRAGMA quick_check on both nodes
     check_a = conn_a.execute("PRAGMA quick_check").fetchone()[0]

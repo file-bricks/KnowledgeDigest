@@ -1,6 +1,19 @@
 # MARKETING-LOG.txt — KnowledgeDigest
 # Chronologisches Log fuer Repository-Pflege, Hygiene (Pfad A) und Sichtbarkeit/Marketing (Pfad B)
 
+2026-09-22 (Pfad B, Gemini Antigravity)
+- Scope: Discoverability, Visual Architecture, Level 1 SBOM & Bilingual Navigation (Pfad B).
+- 18-Punkte-Schnellnavigation: Vollständige 18-Punkte-Dual-Anker-Parität (<a id="sec-01"></a> bis <a id="sec-18"></a>) in README.md und README_de.md integriert.
+- Target Personas & High-Intent SEO: 4 Ziel-Personas ([PERSONA-01] bis [PERSONA-04]) mit konkreten Suchphrasen (Local RAG, Offline PDF search, Zero-Egress, Python FTS5) definiert.
+- 10-Dimensionen-Vergleichsmatrix: Detaillierter Vergleich gegenüber Cloud-SaaS (Notion/Glean), Vektor-DBs (Chroma/Pinecone), Desktopsuche (Everything) und Skripten.
+- Governance & Invarianten: 10 Laufzeit-Invarianten (INV-LOCAL-01 bis INV-SLA-10) und Unprivileged Execution (RunAsInvoker) verankert.
+- Level 1 SBOM: THIRD_PARTY_LICENSES.md und kanonische NOTICE angelegt; PySide6 LGPL-3.0 dynamische Bindung und pypdfium2 Apache-2.0 / BSD-3-Clause dokumentiert (Entscheidung E08 gegen AGPL).
+- Haftungsausschluss & SLA: § 521 BGB Gefälligkeitsrecht und 48h Security SLA in Sektion 18 verankert.
+- GitHub Topics & Metadata: 20/20 Topics auf GitHub gesättigt, pyproject.toml Keywords und project.urls erweitert, license-files hinterlegt.
+- Windows Pytest Fix: addopts mit --basetemp=.pytest_tmp konfiguriert (Verhinderung von WinError 5 Symlink-Kollisionen), ruff lint auf 0 Fehler bereinigt.
+- Vertragstests: tests/test_metadata.py um 6 neue Tests erweitert (NOTICE, SBOM, Invarianten, 18-Punkte-Parität, Version Freeze auf 0.4.0, § 521 BGB).
+- Doku & Badges: Shields.io Badges synchronisiert (NOTICE, Level 1 SBOM, 0.4.0 frozen, FTS5, Zero-Egress, 48h SLA), llms.txt aktualisiert.
+
 2026-09-14 (Pfad A, Gemini Antigravity, commit pending)
 - Scope: Repository-Hygiene, CI-Matrix-Haertung, PEP 621 Metadaten und Vertragstest-Erweiterung (Pfad A).
 - Kritischer Fix: F823 UnboundLocalError auf 'Path' in digest.py behoben (innere Import-Verschachtelung in CLI 'dups').
