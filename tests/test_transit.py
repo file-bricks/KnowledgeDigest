@@ -15,16 +15,25 @@ Covers the 6 acceptance criteria specified in T-20260727-05:
 from datetime import timedelta
 
 import pytest
-from sqlite_transit_sync import SyncError
+
+try:
+    from sqlite_transit_sync import SyncError
+except ImportError:  # optional dependency, see transit.py
+    SyncError = None
 
 from KnowledgeDigest.schema import ensure_schema
 from KnowledgeDigest.transit import (
+    TRANSIT_SYNC_AVAILABLE,
     generate_chunk_key,
     ChunkTaskManager,
     KnowledgeDigestMergePolicy,
     create_knowledge_sync,
     utc_now,
     iso_timestamp,
+)
+
+requires_transit_sync = pytest.mark.skipif(
+    not TRANSIT_SYNC_AVAILABLE, reason="optional package sqlite-transit-sync not installed"
 )
 
 
@@ -86,6 +95,7 @@ def test_chunk_key_generation():
     assert key1 != key_modified
 
 
+@requires_transit_sync
 def test_t01_two_nodes_exclusive_claim(transit_environment):
     """Criterion 1: Both nodes see the same chunk, but only one node obtains the claim."""
     env = transit_environment
@@ -143,6 +153,7 @@ def test_t01_two_nodes_exclusive_claim(transit_environment):
     assert started is True
 
 
+@requires_transit_sync
 def test_t02_result_converges_once(transit_environment):
     """Criterion 2: Result appears after pull on both nodes exactly once."""
     env = transit_environment
@@ -188,6 +199,7 @@ def test_t02_result_converges_once(transit_environment):
     assert claim_attempt is False
 
 
+@requires_transit_sync
 def test_t03_expired_claim_takeover(transit_environment):
     """Criterion 3: Expired claim can be safely taken over by another node."""
     env = transit_environment
@@ -272,6 +284,7 @@ def test_t03_expired_claim_takeover(transit_environment):
     assert task_a_final["claimed_by_node"] == "node_b"
 
 
+@requires_transit_sync
 def test_t04_repeated_pull_is_idempotent(transit_environment):
     """Criterion 4: Repeated pull operations are strictly idempotent."""
     env = transit_environment
@@ -314,6 +327,7 @@ def test_t04_repeated_pull_is_idempotent(transit_environment):
     assert report.unchanged == 5
 
 
+@requires_transit_sync
 def test_t05_secret_negative_test_and_quick_check(transit_environment):
     """Criterion 5: Secret negative test blocks export, and PRAGMA quick_check stays ok."""
     env = transit_environment
@@ -373,3 +387,105 @@ def test_t05_secret_negative_test_and_quick_check(transit_environment):
     # Quick check remains ok
     check_a_after = conn_a.execute("PRAGMA quick_check").fetchone()[0]
     assert check_a_after == "ok"
+
+
+# ---------------------------------------------------------------------------
+# Lifecycle tests that run without the optional sqlite-transit-sync package
+# ---------------------------------------------------------------------------
+
+
+@pytest.fixture
+def single_node(tmp_path):
+    conn = ensure_schema(tmp_path / "knowledge.db")
+    yield conn
+    conn.close()
+
+
+def test_iso_timestamp_is_fixed_width_utc():
+    from datetime import datetime, timezone, timedelta as td
+
+    whole = iso_timestamp(datetime(2026, 1, 1, 12, 0, 0, tzinfo=timezone.utc))
+    frac = iso_timestamp(datetime(2026, 1, 1, 12, 0, 0, 500, tzinfo=timezone.utc))
+    shifted = iso_timestamp(datetime(2026, 1, 1, 14, 0, 0, tzinfo=timezone(td(hours=2))))
+    assert len(whole) == len(frac)
+    assert whole < frac
+    assert shifted == whole
+
+
+def test_register_task_is_idempotent(single_node):
+    key1 = ChunkTaskManager.register_task(single_node, "document", "a.md", "v1", 0)
+    key2 = ChunkTaskManager.register_task(single_node, "document", "a.md", "v1", 0)
+    assert key1 == key2
+    count = single_node.execute("SELECT COUNT(*) FROM chunk_tasks").fetchone()[0]
+    assert count == 1
+
+
+def test_lifecycle_claim_process_heartbeat_done(single_node):
+    key = ChunkTaskManager.register_task(single_node, "document", "b.md", "v1", 0)
+    assert ChunkTaskManager.claim_task(single_node, key, "n1", "agent") is True
+    # second claim on an active lease is rejected
+    assert ChunkTaskManager.claim_task(single_node, key, "n2", "agent") is False
+    # only the owning node may start processing
+    assert ChunkTaskManager.start_processing(single_node, key, "n2") is False
+    assert ChunkTaskManager.start_processing(single_node, key, "n1") is True
+    assert ChunkTaskManager.heartbeat(single_node, key, "n1") is True
+    assert ChunkTaskManager.complete_task(single_node, key, "n1", "summary") is True
+    task = ChunkTaskManager.get_task(single_node, key)
+    assert task["status"] == "done"
+    # done is terminal
+    assert ChunkTaskManager.claim_task(single_node, key, "n2", "agent") is False
+    assert ChunkTaskManager.heartbeat(single_node, key, "n1") is False
+
+
+def test_get_task_does_not_change_row_factory(single_node):
+    before = single_node.row_factory
+    key = ChunkTaskManager.register_task(single_node, "wiki", "Page", "v1", 0)
+    assert ChunkTaskManager.get_task(single_node, key)["chunk_key"] == key
+    assert single_node.row_factory is before
+
+
+def test_failed_task_can_be_reclaimed(single_node):
+    key = ChunkTaskManager.register_task(single_node, "skill", "s", "v1", 0)
+    ChunkTaskManager.claim_task(single_node, key, "n1", "agent")
+    assert ChunkTaskManager.fail_task(single_node, key, "n1", "boom") is True
+    assert ChunkTaskManager.get_task(single_node, key)["status"] == "error"
+    assert ChunkTaskManager.claim_task(single_node, key, "n2", "agent") is True
+
+
+def test_expired_lease_takeover_without_sync(single_node):
+    key = ChunkTaskManager.register_task(single_node, "document", "c.md", "v1", 0)
+    past = utc_now() - timedelta(minutes=10)
+    assert ChunkTaskManager.claim_task(single_node, key, "n1", "agent", lease_seconds=60, now=past)
+    assert ChunkTaskManager.claim_task(single_node, key, "n2", "agent") is True
+    assert ChunkTaskManager.get_task(single_node, key)["claimed_by_node"] == "n2"
+
+
+@pytest.mark.parametrize(
+    "local, remote, expected",
+    [
+        ({"status": "done"}, {"status": "claimed"}, False),
+        ({"status": "claimed", "lease_expires_at": "9999"}, {"status": "done"}, True),
+        ({"status": "pending"}, {"status": "error"}, True),
+        ({"status": "pending"}, {"status": "claimed", "lease_expires_at": "9999"}, True),
+        (
+            {"status": "claimed", "lease_expires_at": "9999", "claimed_at": "2026-01-02"},
+            {"status": "claimed", "lease_expires_at": "9999", "claimed_at": "2026-01-01"},
+            True,
+        ),
+        (
+            {"status": "claimed", "lease_expires_at": "9999", "claimed_at": "x", "claimed_by_node": "a"},
+            {"status": "claimed", "lease_expires_at": "9999", "claimed_at": "x", "claimed_by_node": "b"},
+            False,
+        ),
+    ],
+)
+def test_resolve_chunk_conflict(local, remote, expected):
+    remote_wins, _ = KnowledgeDigestMergePolicy._resolve_chunk_conflict(local, remote, iso_timestamp())
+    assert remote_wins is expected
+
+
+def test_create_knowledge_sync_reports_missing_dependency(tmp_path):
+    if TRANSIT_SYNC_AVAILABLE:
+        pytest.skip("sqlite-transit-sync installed")
+    with pytest.raises(ImportError, match="sqlite-transit-sync"):
+        create_knowledge_sync(tmp_path / "k.db", tmp_path / "yard", "n1")

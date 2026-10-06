@@ -28,12 +28,29 @@ from datetime import datetime, timezone, timedelta
 from pathlib import Path
 from typing import Any, Optional
 
-from sqlite_transit_sync import (
-    SyncConfig,
-    TransitSync,
-    Snapshot,
-    MergeReport,
+try:  # optional dependency: https://github.com/ellmos-ai/sqlite-transit-sync
+    from sqlite_transit_sync import (
+        SyncConfig,
+        TransitSync,
+        Snapshot,
+        MergeReport,
+    )
+
+    TRANSIT_SYNC_AVAILABLE = True
+except ImportError:  # pragma: no cover - depends on the local environment
+    SyncConfig = TransitSync = Snapshot = MergeReport = None  # type: ignore[assignment,misc]
+    TRANSIT_SYNC_AVAILABLE = False
+
+_MISSING_TRANSIT_MSG = (
+    "Transit sync requires the optional package 'sqlite-transit-sync' "
+    "(https://github.com/ellmos-ai/sqlite-transit-sync). "
+    "ChunkTaskManager and generate_chunk_key work without it."
 )
+
+
+def _require_transit_sync() -> None:
+    if not TRANSIT_SYNC_AVAILABLE:
+        raise ImportError(_MISSING_TRANSIT_MSG)
 
 
 def utc_now() -> datetime:
@@ -42,9 +59,15 @@ def utc_now() -> datetime:
 
 
 def iso_timestamp(dt: Optional[datetime] = None) -> str:
-    """Formats a datetime as ISO 8601 string."""
+    """Formats a datetime as fixed-width ISO 8601 UTC string.
+
+    Lease checks compare timestamps lexicographically (in SQL and in the merge
+    policy), so every value must use the same offset and precision.
+    """
     t = dt or utc_now()
-    return t.isoformat()
+    if t.tzinfo is None:
+        t = t.replace(tzinfo=timezone.utc)
+    return t.astimezone(timezone.utc).isoformat(timespec="microseconds")
 
 
 def parse_iso(ts_str: Optional[str]) -> Optional[datetime]:
@@ -278,9 +301,9 @@ class ChunkTaskManager:
     @staticmethod
     def get_task(conn: sqlite3.Connection, chunk_key: str) -> Optional[dict[str, Any]]:
         """Fetches a task by chunk_key as dict."""
-        conn.row_factory = sqlite3.Row
-        cur = conn.execute("SELECT * FROM chunk_tasks WHERE chunk_key = ?", (chunk_key,))
-        row = cur.fetchone()
+        cur = conn.cursor()
+        cur.row_factory = sqlite3.Row  # do not mutate the caller's connection
+        row = cur.execute("SELECT * FROM chunk_tasks WHERE chunk_key = ?", (chunk_key,)).fetchone()
         return dict(row) if row else None
 
 
@@ -305,6 +328,7 @@ class KnowledgeDigestMergePolicy:
         remote: sqlite3.Connection,
         snapshot: Snapshot,
     ) -> MergeReport:
+        _require_transit_sync()
         local.row_factory = sqlite3.Row
         remote.row_factory = sqlite3.Row
 
@@ -497,6 +521,7 @@ def create_knowledge_sync(
         state_dir: Directory for local sync state (defaults to ~/.wissensdb-transit).
         namespace: Logical namespace for transit snapshots.
     """
+    _require_transit_sync()
     if state_dir is None:
         state_dir = db_path.parent / ".transit_state"
     state_dir.mkdir(parents=True, exist_ok=True)
