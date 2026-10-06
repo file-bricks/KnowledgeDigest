@@ -2,6 +2,17 @@
 
 ## [Unreleased]
 
+- **Bugfix-Sweep (2026-10-06)**:
+  - **FTS5-Delete-Trigger repariert (Schema v5)**: Die Trigger nutzten den FTS5-`'delete'`-Befehl auf regulären FTS5-Tabellen → `SQL logic error` bei jedem Löschen von Chunks (Re-Ingest, `index --force`, Web-Viewer-Löschen, `deduplicate`). Bestehende Datenbanken werden beim Öffnen migriert.
+  - **Löschen konsistent**: Web-Viewer und `deduplicate` entfernen zuerst die DB-Einträge (Transaktion) und verschieben danach die Datei in `_Papierkorb`; Fehler pro Eintrag brechen den Lauf nicht mehr ab.
+  - **GUI**: Falsche relative Imports (`..schema`/`..config`) ließen die Dokumentliste immer leer; nach dem Sortieren wurde das falsche Dokument geöffnet; Scan-Threads nutzten eine im GUI-Thread erzeugte SQLite-Connection (jede Datei schlug fehl); EventBus-Handler liefen in Worker-Threads (jetzt Queued-Dispatch in den GUI-Thread).
+  - **Summarizer**: Fehlgeschlagene Chunks führen zu Status `error` statt `done`; verwaiste `processing`-Einträge (> 30 min) werden zurückgesetzt, Ctrl+C setzt das aktuelle Item auf `pending`; Kostenschätzung auf claude-haiku-4-5-Preise ($1/$5 pro MTok) aktualisiert.
+  - **Suche**: FTS5-Syntaxfehler (z.B. `COVID-19`, `E-Mail`, `c++`) werden mit quotierten Tokens wiederholt, danach LIKE-Fallback (auch für Dokumente); `%`/`_` werden in LIKE-Fallbacks und Verzeichnisfiltern escaped; Verzeichnisfilter matchen keine Geschwister-Ordner mehr (`docs` ≠ `docs2`).
+  - **Ingest**: Re-Ingest setzt Zusammenfassungen und Queue-Status zurück; archivierte Dokumente werden über `archived_path` gefunden; UTF-8-BOM wird entfernt (Frontmatter-Erkennung); der Chunker erzwingt die Obergrenze von 500 Wörtern auch bei Text ohne Satzgrenzen.
+  - **Sonstiges**: `is_active = 0` bleibt beim Skill-Index erhalten; Operator-Präzedenz bei `content_hash` korrigiert; `Config` teilt Default-Listen nicht mehr zwischen Instanzen; `zoll_station.py` ruft die CLI als Modul auf; plattformübergreifendes Öffnen von Dateien (Windows/macOS/Linux).
+  - **Transit-Sync optional**: `sqlite-transit-sync` ist nicht auf PyPI – Import ist jetzt optional, die Sync-Tests werden ohne Paket übersprungen statt die gesamte Test-Collection abzubrechen.
+  - **Tests**: 43 neue Regressionstests (`tests/test_bugfixes_2026_10.py`) plus Lifecycle-Tests in `tests/test_transit.py`.
+
 - **Discoverability, Visual Architecture & Level 1 SBOM (Pfad B, 2026-09-22)**:
   - **18-Point Bilingual Navigation Parity**: Implemented 18-point dual-anchor navigation parity (`<a id="sec-01"></a>`...`<a id="sec-18"></a>`) across `README.md` and `README_de.md` with reciprocal dual anchors for backward compatibility.
   - **Target Personas & SEO Discovery**: Added explicit persona profiles (`[PERSONA-01]` to `[PERSONA-04]`) with high-intent search queries for AI engineers, researchers, compliance officers, and automation builders.

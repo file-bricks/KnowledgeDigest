@@ -5,9 +5,6 @@ Zeigt Vorschau des ausgewaehlten Dokuments.
 Adaptiert von DokuZentrum (gui/panels/preview_panel.py).
 """
 
-import os
-import sys
-import subprocess
 from pathlib import Path
 from typing import Optional
 
@@ -17,6 +14,8 @@ from PySide6.QtWidgets import (
 )
 from PySide6.QtCore import Qt, QSize
 from PySide6.QtGui import QPixmap, QImage
+
+from ...utils import open_path, resolve_document_path
 
 
 class PreviewPanel(QWidget):
@@ -116,7 +115,8 @@ class PreviewPanel(QWidget):
     def show_document(self, doc_data):
         """Zeigt Vorschau fuer ein Dokument (dict aus DB)."""
         self._current_doc = doc_data
-        file_path = doc_data.get("file_path", "")
+        # Archivierte Dokumente liegen unter archived_path statt file_path
+        file_path = resolve_document_path(doc_data) or ""
         self._current_path = file_path
 
         name = doc_data.get("filename", Path(file_path).name if file_path else "?")
@@ -244,7 +244,7 @@ class PreviewPanel(QWidget):
         doc_id = doc.get("id")
         if doc_id:
             try:
-                from ..schema import ensure_schema
+                from ...schema import ensure_schema
                 conn = ensure_schema(self._current_doc_db_path())
                 # Keywords
                 kws = conn.execute(
@@ -284,7 +284,7 @@ class PreviewPanel(QWidget):
             self._chunks_widget.setPlainText("Keine Chunks verfuegbar.")
             return
         try:
-            from ..schema import ensure_schema
+            from ...schema import ensure_schema
             conn = ensure_schema(self._current_doc_db_path())
             chunks = conn.execute(
                 "SELECT chunk_index, content FROM document_chunks WHERE doc_id=? ORDER BY chunk_index",
@@ -304,14 +304,9 @@ class PreviewPanel(QWidget):
 
     def _current_doc_db_path(self):
         """Gibt den DB-Pfad zurueck."""
-        from ..config import get_config
+        from ...config import get_config
         return get_config().get_db_path()
 
     def _open_external(self):
         if self._current_path:
-            if sys.platform == "win32":
-                os.startfile(self._current_path)
-            elif sys.platform == "darwin":
-                subprocess.run(["open", self._current_path])
-            else:
-                subprocess.run(["xdg-open", self._current_path])
+            open_path(self._current_path)

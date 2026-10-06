@@ -188,12 +188,12 @@ class TestChunkText:
         assert len(chunks) >= 3
 
     def test_single_line_no_paragraphs_exceeds_max(self):
-        # Ein einziger Einzeiler > MAX_CHUNK_SIZE (500) wird als ein oversized Chunk
-        # unveraendert zurueckgegeben (kein Split ohne Satzzeichen/Absaetze moeglich)
+        # Ein einziger Einzeiler > MAX_CHUNK_SIZE (500) ohne Satzzeichen/Absaetze
+        # wird hart in Wortfenster der Groesse chunk_size zerlegt (harte Obergrenze)
         text = " ".join([f"word{i}" for i in range(1400)])
         chunks = chunk_text(text, chunk_size=350)
-        assert len(chunks) == 1
-        assert chunks[0].token_count == 1400
+        assert [c.token_count for c in chunks] == [350, 350, 350, 350]
+        assert " ".join(c.content for c in chunks) == text
 
     def test_token_count_matches_content(self):
         text = "Dies ist ein Test mit genau acht Woertern hier."
@@ -276,7 +276,7 @@ class TestSchema:
             db_path.unlink(missing_ok=True)
 
     def test_schema_version_constant(self):
-        assert SCHEMA_VERSION == 4
+        assert SCHEMA_VERSION == 5
 
     def test_get_schema_version_nonexistent(self, tmp_path):
         # Datei existiert nicht -> Version 0

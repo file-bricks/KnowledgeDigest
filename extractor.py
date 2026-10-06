@@ -170,8 +170,8 @@ class TextExtractor:
 
     @staticmethod
     def _read_file(path: Path) -> Optional[str]:
-        """Liest Datei mit UTF-8, Fallback auf cp1252 (Windows)."""
-        for encoding in ('utf-8', 'cp1252', 'latin-1'):
+        """Liest Datei mit UTF-8 (BOM wird entfernt), Fallback auf cp1252 (Windows)."""
+        for encoding in ('utf-8-sig', 'cp1252', 'latin-1'):
             try:
                 return path.read_text(encoding=encoding)
             except (UnicodeDecodeError, UnicodeError):

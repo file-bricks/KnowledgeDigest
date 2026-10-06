@@ -15,7 +15,6 @@ import os
 import sys
 import json
 import html
-import shutil
 import sqlite3
 import argparse
 import webbrowser
@@ -23,6 +22,11 @@ import urllib.parse
 import threading
 from http.server import HTTPServer, BaseHTTPRequestHandler
 from pathlib import Path
+
+try:
+    from .utils import escape_like, fts5_quote, move_to_trash, open_path, resolve_document_path
+except ImportError:  # Standalone (python web_viewer.py / Tests mit sys.path)
+    from utils import escape_like, fts5_quote, move_to_trash, open_path, resolve_document_path
 
 
 def _get_conn(db_path):
@@ -323,7 +327,10 @@ def page_doc(db_path, doc_id):
         fetch('/api/delete_file/' + docId, {{method: 'POST'}})
             .then(r => r.json())
             .then(data => {{
-                if(data.ok) location.href = '/';
+                if(data.ok) {{
+                    if(data.warning) alert(data.warning);
+                    location.href = '/';
+                }}
                 else alert('Fehler: ' + data.error);
             }})
             .catch(e => alert('Fehler: ' + e));
@@ -371,21 +378,28 @@ def page_search(db_path, query="", limit=30):
     </form>"""
     if query:
         conn = _get_conn(db_path)
-        try:
-            rows = conn.execute(
-                "SELECT d.id, d.filename, d.file_type, d.word_count, "
-                "snippet(document_fts, 1, char(1), char(2), '...', 30) as snippet "
-                "FROM document_fts JOIN document_chunks dc ON document_fts.rowid = dc.id "
-                "JOIN documents d ON dc.doc_id = d.id "
-                "WHERE document_fts MATCH ? ORDER BY document_fts.rank LIMIT ?",
-                (query, limit)
-            ).fetchall()
-        except Exception:
-            like = f"%{query}%"
+        rows = None
+        # Erst FTS5-Syntax, bei Syntaxfehler (z.B. 'COVID-19', 'c++')
+        # quotierte Tokens, zuletzt LIKE-Fallback
+        for fts_query in (query, fts5_quote(query)):
+            try:
+                rows = conn.execute(
+                    "SELECT d.id, d.filename, d.file_type, d.word_count, "
+                    "snippet(document_fts, 1, char(1), char(2), '...', 30) as snippet "
+                    "FROM document_fts JOIN document_chunks dc ON document_fts.rowid = dc.id "
+                    "JOIN documents d ON dc.doc_id = d.id "
+                    "WHERE document_fts MATCH ? ORDER BY document_fts.rank LIMIT ?",
+                    (fts_query, limit)
+                ).fetchall()
+                break
+            except sqlite3.OperationalError:
+                continue
+        if rows is None:
+            like = f"%{escape_like(query)}%"
             rows = conn.execute(
                 "SELECT DISTINCT d.id, d.filename, d.file_type, d.word_count, '' as snippet "
                 "FROM documents d LEFT JOIN document_chunks dc ON dc.doc_id = d.id "
-                "WHERE dc.content LIKE ? OR d.filename LIKE ? LIMIT ?",
+                "WHERE dc.content LIKE ? ESCAPE '\\' OR d.filename LIKE ? ESCAPE '\\' LIMIT ?",
                 (like, like, limit)
             ).fetchall()
         conn.close()
@@ -566,31 +580,30 @@ class ViewerHandler(BaseHTTPRequestHandler):
     def _delete_file(self, doc_id):
         conn = _get_conn(self.db_path)
         try:
-            doc = conn.execute("SELECT file_path FROM documents WHERE id=?", (doc_id,)).fetchone()
+            doc = conn.execute("SELECT file_path, archived_path FROM documents WHERE id=?",
+                               (doc_id,)).fetchone()
             if doc:
-                file_path = doc['file_path']
-                trash_dir = Path(self.db_path).parent / "_Papierkorb"
-                trash_dir.mkdir(parents=True, exist_ok=True)
-                if os.path.exists(file_path):
-                    base_name = os.path.basename(file_path)
-                    trash_path = trash_dir / base_name
-                    counter = 1
-                    while trash_path.exists():
-                        name, ext = os.path.splitext(base_name)
-                        trash_path = trash_dir / f"{name}_{counter}{ext}"
-                        counter += 1
-                    try:
-                        shutil.move(file_path, str(trash_path))
-                    except Exception as e:
-                        print(f"Move Error: {e}")
+                file_path = resolve_document_path(doc)
 
-                conn.execute("DELETE FROM summaries WHERE source_type='document' AND source_id=?", (doc_id,))
-                conn.execute("DELETE FROM document_keywords WHERE doc_id=?", (doc_id,))
-                conn.execute("DELETE FROM document_chunks WHERE doc_id=?", (doc_id,))
-                conn.execute("DELETE FROM digest_queue WHERE source_type='document' AND source_id=?", (doc_id,))
-                conn.execute("DELETE FROM documents WHERE id=?", (doc_id,))
-                conn.commit()
-                self._respond(200, json.dumps({"ok": True}), "application/json")
+                # Erst DB-Eintrag in einer Transaktion entfernen, dann die
+                # Datei verschieben: schlaegt das Verschieben fehl, bleibt die
+                # DB trotzdem konsistent (vorher: Datei weg, DB-Eintrag da).
+                with conn:
+                    conn.execute("DELETE FROM summaries WHERE source_type='document' AND source_id=?", (doc_id,))
+                    conn.execute("DELETE FROM document_keywords WHERE doc_id=?", (doc_id,))
+                    conn.execute("DELETE FROM document_chunks WHERE doc_id=?", (doc_id,))
+                    conn.execute("DELETE FROM digest_queue WHERE source_type='document' AND source_id=?", (doc_id,))
+                    conn.execute("DELETE FROM documents WHERE id=?", (doc_id,))
+
+                result = {"ok": True}
+                if file_path and os.path.exists(file_path):
+                    try:
+                        trash_path = move_to_trash(file_path, Path(self.db_path).parent / "_Papierkorb")
+                        result["moved_to"] = str(trash_path)
+                    except Exception as e:
+                        result["warning"] = (f"Aus der Datenbank entfernt, aber Datei konnte nicht "
+                                             f"in den Papierkorb verschoben werden: {e}")
+                self._respond(200, json.dumps(result), "application/json")
             else:
                 self._respond(404, json.dumps({"ok": False, "error": "Doc not found"}), "application/json")
         except Exception as e:
@@ -600,20 +613,16 @@ class ViewerHandler(BaseHTTPRequestHandler):
 
     def _open_file(self, doc_id):
         conn = _get_conn(self.db_path)
-        row = conn.execute("SELECT file_path FROM documents WHERE id=?", (doc_id,)).fetchone()
+        row = conn.execute("SELECT file_path, archived_path FROM documents WHERE id=?",
+                           (doc_id,)).fetchone()
         conn.close()
         if not row:
             return {"ok": False, "error": "Dokument nicht gefunden"}
-        file_path = row["file_path"]
-        p = Path(file_path)
-        if not p.exists():
+        file_path = resolve_document_path(row)
+        if not file_path or not Path(file_path).exists():
             return {"ok": False, "error": f"Datei nicht gefunden: {file_path}"}
         try:
-            if sys.platform == "win32":
-                os.startfile(str(p))
-            else:
-                import subprocess
-                subprocess.run(["xdg-open", str(p)])
+            open_path(file_path)
             return {"ok": True, "path": file_path}
         except Exception as e:
             return {"ok": False, "error": str(e)}

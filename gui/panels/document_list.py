@@ -12,6 +12,7 @@ from PySide6.QtWidgets import (
 from PySide6.QtCore import Qt
 
 from ..event_bus import EventType, get_event_bus
+from ...utils import dir_filter_sql, open_path, resolve_document_path
 
 
 class DocumentListPanel(QWidget):
@@ -80,7 +81,7 @@ class DocumentListPanel(QWidget):
             self._table.insertRow(row)
 
             name = r.get("filename", r.get("name", "?"))
-            self._table.setItem(row, 0, QTableWidgetItem(name))
+            self._table.setItem(row, 0, self._name_item(name, len(self._docs) - 1))
             self._table.setItem(row, 1, QTableWidgetItem(r.get("file_type", r.get("source", ""))))
 
             wc = QTableWidgetItem()
@@ -105,23 +106,24 @@ class DocumentListPanel(QWidget):
         self._docs = []
 
         try:
-            from ..schema import ensure_schema
+            from ...schema import ensure_schema
             conn = ensure_schema(self._kd.db_path)
 
             if dir_filter:
-                rows = conn.execute("""
+                where_sql, where_params = dir_filter_sql("d.source_dir", dir_filter)
+                rows = conn.execute(f"""
                     SELECT d.id, d.filename, d.file_type, d.word_count, d.chunk_count,
-                           d.file_path, d.source_dir,
+                           d.file_path, d.archived_path, d.source_dir,
                            (SELECT COUNT(*) FROM summaries s
                             WHERE s.source_type='document' AND s.source_id=d.id) as sum_count
                     FROM documents d
-                    WHERE d.source_dir LIKE ?
+                    WHERE {where_sql}
                     ORDER BY d.filename
-                """, (dir_filter + "%",)).fetchall()
+                """, where_params).fetchall()
             else:
                 rows = conn.execute("""
                     SELECT d.id, d.filename, d.file_type, d.word_count, d.chunk_count,
-                           d.file_path, d.source_dir,
+                           d.file_path, d.archived_path, d.source_dir,
                            (SELECT COUNT(*) FROM summaries s
                             WHERE s.source_type='document' AND s.source_id=d.id) as sum_count
                     FROM documents d
@@ -136,7 +138,7 @@ class DocumentListPanel(QWidget):
                 r = self._table.rowCount()
                 self._table.insertRow(r)
 
-                self._table.setItem(r, 0, QTableWidgetItem(doc["filename"]))
+                self._table.setItem(r, 0, self._name_item(doc["filename"], len(self._docs) - 1))
                 self._table.setItem(r, 1, QTableWidgetItem(doc.get("file_type", "")))
 
                 wc = QTableWidgetItem()
@@ -156,19 +158,36 @@ class DocumentListPanel(QWidget):
 
         self._table.setSortingEnabled(True)
 
+    @staticmethod
+    def _name_item(text, doc_index):
+        """Spalte-0-Item; merkt sich den Index in self._docs (UserRole),
+        da die sichtbare Zeile nach dem Sortieren nicht mehr dem Index entspricht."""
+        item = QTableWidgetItem(text)
+        item.setData(Qt.ItemDataRole.UserRole, doc_index)
+        return item
+
+    def _doc_at(self, row):
+        """Dokument zur sichtbaren Tabellenzeile (sortierfest)."""
+        item = self._table.item(row, 0)
+        if item is None:
+            return None
+        idx = item.data(Qt.ItemDataRole.UserRole)
+        if isinstance(idx, int) and 0 <= idx < len(self._docs):
+            return self._docs[idx]
+        return None
+
     def _on_selection_changed(self, row, col, prev_row, prev_col):
-        if 0 <= row < len(self._docs):
-            doc = self._docs[row]
+        doc = self._doc_at(row)
+        if doc is not None:
             self._bus.emit(EventType.DOCUMENT_SELECTED, doc)
 
     def _on_double_click(self, row, col):
         """Doppelklick oeffnet Datei."""
-        if 0 <= row < len(self._docs):
-            doc = self._docs[row]
-            file_path = doc.get("file_path", "")
+        doc = self._doc_at(row)
+        if doc is not None:
+            file_path = resolve_document_path(doc)
             if file_path:
-                import os
                 try:
-                    os.startfile(file_path)
+                    open_path(file_path)
                 except Exception:
                     pass

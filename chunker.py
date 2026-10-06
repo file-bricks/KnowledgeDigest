@@ -65,7 +65,7 @@ def split_frontmatter(text: str) -> Tuple[Optional[str], str]:
     if not text:
         return None, ""
 
-    text = text.strip()
+    text = text.strip().lstrip("\ufeff")  # UTF-8-BOM wuerde '---' verdecken
 
     # Frontmatter: beginnt mit --- und endet mit ---
     if text.startswith("---"):
@@ -116,6 +116,21 @@ def _split_sentences(text: str) -> List[str]:
     return segments
 
 
+def _hard_split(segments: List[str], window: int) -> List[str]:
+    """Erzwingt die harte Obergrenze: Segmente > MAX_CHUNK_SIZE (z.B. lange
+    Einzeiler ohne Satzgrenzen) werden in Wortfenster der Groesse `window`
+    zerlegt."""
+    result: List[str] = []
+    for segment in segments:
+        words = segment.split()
+        if len(words) <= MAX_CHUNK_SIZE:
+            result.append(segment)
+            continue
+        for i in range(0, len(words), window):
+            result.append(" ".join(words[i:i + window]))
+    return result
+
+
 def chunk_text(text: str, chunk_size: int = DEFAULT_CHUNK_SIZE,
                overlap: int = DEFAULT_OVERLAP,
                separate_frontmatter: bool = True) -> List[Chunk]:
@@ -151,8 +166,9 @@ def chunk_text(text: str, chunk_size: int = DEFAULT_CHUNK_SIZE,
         ))
         chunk_idx += 1
 
-    # Body in Segmente splitten
-    segments = _split_sentences(body)
+    # Body in Segmente splitten (Segmente > MAX_CHUNK_SIZE hart teilen)
+    segments = _hard_split(_split_sentences(body),
+                           max(1, min(chunk_size, MAX_CHUNK_SIZE)))
     if not segments:
         return chunks
 
@@ -225,8 +241,10 @@ def chunk_text(text: str, chunk_size: int = DEFAULT_CHUNK_SIZE,
         content = "\n\n".join(current_parts)
         tokens = estimate_tokens(content)
 
-        # Zu kleiner letzter Chunk? An vorherigen anhaengen
-        if tokens < MIN_CHUNK_SIZE and len(chunks) > 0 and not chunks[-1].is_frontmatter:
+        # Zu kleiner letzter Chunk? An vorherigen anhaengen (sofern die
+        # harte Obergrenze dabei nicht ueberschritten wird)
+        if (tokens < MIN_CHUNK_SIZE and len(chunks) > 0 and not chunks[-1].is_frontmatter
+                and chunks[-1].token_count + tokens <= MAX_CHUNK_SIZE):
             prev = chunks[-1]
             merged = prev.content + "\n\n" + content
             chunks[-1] = Chunk(

@@ -23,9 +23,9 @@ from pathlib import Path
 from typing import Dict, List, Optional, Any
 
 try:
-    from .schema import ensure_schema
+    from .schema import ThreadLocalConnections, reset_stale_processing
 except ImportError:  # script mode (python digest.py ...)
-    from schema import ensure_schema
+    from schema import ThreadLocalConnections, reset_stale_processing
 
 _DEFAULT_MODEL = "gemini-2.0-flash"
 
@@ -59,15 +59,13 @@ class GeminiFlashSummarizer:
     def __init__(self, knowledge_db: Path, api_key: Optional[str] = None,
                  model: Optional[str] = None):
         self.knowledge_db = knowledge_db
-        self._conn: Optional[sqlite3.Connection] = None
+        self._conns = ThreadLocalConnections()  # eine Connection pro Thread
         self._api_key = api_key or os.environ.get('GEMINI_API_KEY')
         self.model = model or os.environ.get('GEMINI_MODEL') or _DEFAULT_MODEL
         self._client = None
 
     def _get_conn(self) -> sqlite3.Connection:
-        if self._conn is None:
-            self._conn = ensure_schema(self.knowledge_db)
-        return self._conn
+        return self._conns.get(self.knowledge_db)
 
     def _get_client(self):
         if self._client is None:
@@ -81,9 +79,7 @@ class GeminiFlashSummarizer:
         return self._client
 
     def close(self):
-        if self._conn:
-            self._conn.close()
-            self._conn = None
+        self._conns.close_all()
 
     def summarize_queue(self, *, limit: int = 10, delay: float = 0.5) -> Dict[str, Any]:
         start = time.time()
@@ -96,6 +92,9 @@ class GeminiFlashSummarizer:
             'total_output_tokens': 0,
             'items': [],
         }
+
+        # Nach Absturz/Abbruch haengengebliebene Items wieder freigeben
+        stats['reset_stale'] = reset_stale_processing(conn)
 
         queue_items = conn.execute("""
             SELECT id, source_type, source_id
@@ -136,10 +135,12 @@ class GeminiFlashSummarizer:
                     'output_tokens': 0,
                 }
 
+                chunk_errors = []
                 for chunk_index, chunk_content in chunks:
                     summary_result = self._summarize_chunk(chunk_content)
 
                     if summary_result.get('error'):
+                        chunk_errors.append((chunk_index, summary_result['error']))
                         continue
 
                     conn.execute("""
@@ -168,13 +169,37 @@ class GeminiFlashSummarizer:
                     if delay > 0:
                         time.sleep(delay)
 
+                stats['total_input_tokens'] += item_result['input_tokens']
+                stats['total_output_tokens'] += item_result['output_tokens']
+                stats['items'].append(item_result)
+
+                if chunk_errors:
+                    # Mindestens ein Chunk fehlgeschlagen -> 'error' statt
+                    # 'done' (erfolgreiche Summaries bleiben erhalten)
+                    first_idx, first_err = chunk_errors[0]
+                    item_result['chunk_errors'] = len(chunk_errors)
+                    conn.execute(
+                        "UPDATE digest_queue SET status='error', error_msg=?, finished_at=CURRENT_TIMESTAMP WHERE id=?",
+                        (f"{len(chunk_errors)}/{len(chunks)} Chunks fehlgeschlagen "
+                         f"(Chunk {first_idx}: {first_err})"[:500], queue_id)
+                    )
+                    conn.commit()
+                    stats['errors'] += 1
+                    continue
+
                 conn.execute("UPDATE digest_queue SET status='done', finished_at=CURRENT_TIMESTAMP WHERE id=?", (queue_id,))
                 conn.commit()
 
                 stats['processed'] += 1
-                stats['total_input_tokens'] += item_result['input_tokens']
-                stats['total_output_tokens'] += item_result['output_tokens']
-                stats['items'].append(item_result)
+
+            except KeyboardInterrupt:
+                # Abbruch (Ctrl+C): aktuelles Item wieder freigeben
+                conn.execute(
+                    "UPDATE digest_queue SET status='pending', started_at=NULL WHERE id=?",
+                    (queue_id,)
+                )
+                conn.commit()
+                raise
 
             except Exception as e:
                 conn.execute(
