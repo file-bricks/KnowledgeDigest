@@ -16,12 +16,14 @@ Entscheidung: Normalisiertes Schema statt flache skill_knowledge Tabelle,
 weil FTS5 ueber einzelne Chunks performanter ist als ueber JSON-Blobs.
 """
 
-__all__ = ["SCHEMA_SQL", "SCHEMA_VERSION", "ensure_schema", "get_schema_version"]
+__all__ = ["SCHEMA_SQL", "SCHEMA_VERSION", "STALE_PROCESSING_MINUTES", "ThreadLocalConnections",
+           "ensure_schema", "get_schema_version", "reset_stale_processing"]
 
 import sqlite3
+import threading
 from pathlib import Path
 
-SCHEMA_VERSION = 4
+SCHEMA_VERSION = 5
 
 SCHEMA_SQL = """
 -- ========================================================================
@@ -71,11 +73,10 @@ CREATE TRIGGER IF NOT EXISTS chunk_ai AFTER INSERT ON skill_chunks BEGIN
            new.content;
 END;
 
+-- skill_fts ist eine regulaere FTS5-Tabelle (kein external content):
+-- der FTS5-'delete'-Befehl ist dort nicht erlaubt -> direktes DELETE.
 CREATE TRIGGER IF NOT EXISTS chunk_ad AFTER DELETE ON skill_chunks BEGIN
-    INSERT INTO skill_fts(skill_fts, rowid, skill_name, content)
-    SELECT 'delete', old.id,
-           (SELECT skill_name FROM skill_index WHERE id = old.skill_id),
-           old.content;
+    DELETE FROM skill_fts WHERE rowid = old.id;
 END;
 
 -- Schluesselwoerter pro Skill
@@ -134,11 +135,7 @@ CREATE TRIGGER IF NOT EXISTS wiki_chunk_ai AFTER INSERT ON wiki_chunks BEGIN
 END;
 
 CREATE TRIGGER IF NOT EXISTS wiki_chunk_ad AFTER DELETE ON wiki_chunks BEGIN
-    INSERT INTO wiki_fts(wiki_fts, rowid, wiki_path, title, content)
-    SELECT 'delete', old.id,
-           (SELECT wiki_path FROM wiki_index WHERE id = old.wiki_id),
-           (SELECT title FROM wiki_index WHERE id = old.wiki_id),
-           old.content;
+    DELETE FROM wiki_fts WHERE rowid = old.id;
 END;
 
 -- Schluesselwoerter pro Wiki
@@ -198,10 +195,7 @@ CREATE TRIGGER IF NOT EXISTS doc_chunk_ai AFTER INSERT ON document_chunks BEGIN
 END;
 
 CREATE TRIGGER IF NOT EXISTS doc_chunk_ad AFTER DELETE ON document_chunks BEGIN
-    INSERT INTO document_fts(document_fts, rowid, filename, content)
-    SELECT 'delete', old.id,
-           (SELECT filename FROM documents WHERE id = old.doc_id),
-           old.content;
+    DELETE FROM document_fts WHERE rowid = old.id;
 END;
 
 -- Schluesselwoerter pro Dokument
@@ -324,13 +318,35 @@ CREATE INDEX IF NOT EXISTS idx_chunk_tasks_source ON chunk_tasks(source_type, ca
 """
 
 
-def ensure_schema(db_path: Path) -> sqlite3.Connection:
+# Delete-Trigger, die bis Schema v4 den FTS5-'delete'-Befehl auf regulaeren
+# FTS5-Tabellen nutzten (-> "SQL logic error" bei jedem DELETE von Chunks).
+_FTS_DELETE_TRIGGERS = ("chunk_ad", "wiki_chunk_ad", "doc_chunk_ad")
+
+
+def _migrate_fts_delete_triggers(conn: sqlite3.Connection) -> None:
+    """Entfernt veraltete FTS-Delete-Trigger (v4), damit SCHEMA_SQL sie neu anlegt.
+
+    CREATE TRIGGER IF NOT EXISTS ersetzt bestehende Trigger nicht -- daher
+    werden nur die alten Varianten (erkennbar an 'delete') gedroppt.
+    """
+    for name in _FTS_DELETE_TRIGGERS:
+        row = conn.execute(
+            "SELECT sql FROM sqlite_master WHERE type='trigger' AND name=?",
+            (name,)
+        ).fetchone()
+        if row and "'delete'" in (row[0] or ""):
+            conn.execute(f"DROP TRIGGER IF EXISTS {name}")
+
+
+def ensure_schema(db_path: Path, *, check_same_thread: bool = True) -> sqlite3.Connection:
     """Erstellt Schema falls noetig, gibt Connection zurueck."""
-    conn = sqlite3.connect(str(db_path), timeout=30)
+    conn = sqlite3.connect(str(db_path), timeout=30,
+                           check_same_thread=check_same_thread)
     conn.row_factory = sqlite3.Row
     conn.execute("PRAGMA journal_mode=WAL")
     conn.execute("PRAGMA foreign_keys=ON")
     conn.execute("PRAGMA busy_timeout=30000")
+    _migrate_fts_delete_triggers(conn)
     conn.executescript(SCHEMA_SQL)
     conn.execute(
         "INSERT OR REPLACE INTO schema_meta (key, value) VALUES ('version', ?)",
@@ -351,3 +367,70 @@ def get_schema_version(db_path: Path) -> int:
         return int(row[0]) if row else 0
     except Exception:
         return 0
+
+
+class ThreadLocalConnections:
+    """Eine SQLite-Connection pro Thread.
+
+    sqlite3-Connections duerfen nur im erzeugenden Thread benutzt werden.
+    Klassen, die ihre Connection cachen (Ingestor, Summarizer, Indexer),
+    werden aber aus GUI- und Scan-Threads aufgerufen -- daher bekommt jeder
+    Thread seine eigene Connection. close_all() schliesst alle; Connections
+    beendeter Threads werden beim naechsten get() aufgeraeumt. (Dafuer werden
+    die Connections mit check_same_thread=False geoeffnet, aber weiterhin nur
+    vom jeweiligen Thread benutzt.)
+    """
+
+    def __init__(self) -> None:
+        self._local = threading.local()
+        self._lock = threading.Lock()
+        self._all: list[tuple[threading.Thread, sqlite3.Connection]] = []
+
+    def get(self, db_path: Path) -> sqlite3.Connection:
+        conn = getattr(self._local, "conn", None)
+        if conn is None:
+            conn = ensure_schema(db_path, check_same_thread=False)
+            self._local.conn = conn
+            with self._lock:
+                dead = [c for t, c in self._all if not t.is_alive()]
+                self._all = [(t, c) for t, c in self._all if t.is_alive()]
+                self._all.append((threading.current_thread(), conn))
+            self._close(dead)
+        return conn
+
+    def close_all(self) -> None:
+        with self._lock:
+            conns = [c for _, c in self._all]
+            self._all = []
+            self._local = threading.local()
+        self._close(conns)
+
+    @staticmethod
+    def _close(conns: list[sqlite3.Connection]) -> None:
+        for conn in conns:
+            try:
+                conn.close()
+            except sqlite3.Error:
+                pass
+
+
+# Queue-Items, die laenger als diese Zeit auf 'processing' stehen, gelten als
+# verwaist (Absturz/Abbruch) und werden wieder auf 'pending' gesetzt.
+STALE_PROCESSING_MINUTES = 30
+
+
+def reset_stale_processing(conn: sqlite3.Connection,
+                           minutes: int = STALE_PROCESSING_MINUTES) -> int:
+    """Setzt verwaiste 'processing'-Eintraege der digest_queue auf 'pending'.
+
+    Verwaist = started_at fehlt oder liegt mehr als `minutes` zurueck.
+    Gibt die Anzahl zurueckgesetzter Eintraege zurueck.
+    """
+    cur = conn.execute(
+        "UPDATE digest_queue SET status='pending', started_at=NULL "
+        "WHERE status='processing' "
+        "AND (started_at IS NULL OR started_at < datetime('now', ?))",
+        (f"-{int(minutes)} minutes",)
+    )
+    conn.commit()
+    return cur.rowcount

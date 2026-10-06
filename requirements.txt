@@ -16,3 +16,6 @@ anthropic>=0.79.0
 
 # Gemini Flash Summarization (optional, nur für summarize --flash)
 google-genai>=1.0.0
+
+# Cross-System Transit Sync (optional, nur für transit.py / create_knowledge_sync)
+# Nicht auf PyPI: pip install "git+https://github.com/ellmos-ai/sqlite-transit-sync"

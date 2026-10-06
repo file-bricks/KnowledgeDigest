@@ -34,6 +34,19 @@ def _require_script(path: Path) -> None:
         sys.exit(1)
 
 
+def _digest_command(script_dir: Path, *args: str):
+    """Kommando + cwd fuer die digest-CLI.
+
+    digest.py nutzt Paket-relative Imports (from .schema ...) und laeuft daher
+    nicht als Script (python digest.py), sondern nur als Modul:
+    python -m <Paketordner> ... mit dem Elternordner als cwd. Liegt das Paket
+    in einem Ordner ohne gueltigen Modulnamen (z.B. ".db"), wird das per
+    pip installierte Paket "KnowledgeDigest" verwendet.
+    """
+    package = script_dir.name if script_dir.name.isidentifier() else "KnowledgeDigest"
+    return [sys.executable, "-m", package, *args], str(script_dir.parent)
+
+
 def main():
     parser = argparse.ArgumentParser(description="Wissensdatenbank Zoll-Station")
     parser.add_argument("--agent", required=True, choices=["claude", "gemini", "flash"],
@@ -43,8 +56,7 @@ def main():
     
     args = parser.parse_args()
     
-    script_dir = Path(__file__).parent
-    wissensdb_script = script_dir / "digest.py"
+    script_dir = Path(__file__).resolve().parent
     haiku_script = script_dir / "haiku_batch.py"  # internal, gitignored
 
     # ASCII-only output: avoids UnicodeEncodeError on Windows consoles
@@ -59,7 +71,8 @@ def main():
         if os.environ.get("GEMINI_API_KEY"):
             print("Status: GEMINI_API_KEY gefunden. Initiierung des Hyper-Flash-Modes (API).")
             print("Fuehre API-Summarizer aus...\n")
-            subprocess.run([sys.executable, str(wissensdb_script), "summarize", "--flash", "--limit", str(limit)])
+            cmd, cwd = _digest_command(script_dir, "summarize", "--flash", "--limit", str(limit))
+            subprocess.run(cmd, cwd=cwd)
         else:
             print("Status: Kein GEMINI_API_KEY gefunden. Keine Abkuerzungen erlaubt. Manueller Uebersetzungs-Zoll faellig!\n")
             print("Generiere Schwarm-Prompt fuer manuelle Verarbeitung:\n")

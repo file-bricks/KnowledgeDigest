@@ -27,7 +27,7 @@ from pathlib import Path
 from datetime import datetime
 from typing import Dict, Optional, Any
 
-from .schema import ensure_schema
+from .schema import ThreadLocalConnections
 from .chunker import chunk_text, estimate_tokens
 from .extractor import TextExtractor
 from .utils import sha256_hash, extract_keywords
@@ -48,7 +48,7 @@ class DocumentIngestor:
 
     def __init__(self, knowledge_db: Path, config=None):
         self.knowledge_db = knowledge_db
-        self._conn: Optional[sqlite3.Connection] = None
+        self._conns = ThreadLocalConnections()  # eine Connection pro Thread
         self._extractor = TextExtractor()
         if config:
             self.inbox_dir = config.get_inbox_dir()
@@ -59,15 +59,11 @@ class DocumentIngestor:
 
     def _get_conn(self) -> sqlite3.Connection:
         """Lazy-init der DB-Connection mit Schema-Sicherstellung."""
-        if self._conn is None:
-            self._conn = ensure_schema(self.knowledge_db)
-        return self._conn
+        return self._conns.get(self.knowledge_db)
 
     def close(self):
         """Schliesst DB-Connection."""
-        if self._conn:
-            self._conn.close()
-            self._conn = None
+        self._conns.close_all()
 
     def _ensure_dirs(self):
         """Erstellt inbox/ und archive/ Ordner falls noetig."""
@@ -182,6 +178,7 @@ class DocumentIngestor:
                     page_count=excluded.page_count,
                     extraction_method=excluded.extraction_method,
                     source_dir=excluded.source_dir,
+                    archived_path=NULL,
                     ingested_at=CURRENT_TIMESTAMP
             """, (
                 str(path.resolve()),
@@ -230,11 +227,24 @@ class DocumentIngestor:
                     )
                     kw_count += 1
 
-            # Queue-Eintrag fuer Summarization
+            # Re-Ingestion eines geaenderten Dokuments: alte Summaries gehoeren
+            # zum alten Inhalt -> loeschen und Queue-Eintrag zuruecksetzen
+            conn.execute(
+                "DELETE FROM summaries WHERE source_type='document' AND source_id=?",
+                (doc_id,)
+            )
+
+            # Queue-Eintrag fuer Summarization (Upsert: bestehender Eintrag
+            # wird wieder auf 'pending' gesetzt)
             conn.execute("""
-                INSERT OR IGNORE INTO digest_queue
+                INSERT INTO digest_queue
                     (source_type, source_id, status, step)
                 VALUES ('document', ?, 'pending', 'summarize')
+                ON CONFLICT(source_type, source_id, step) DO UPDATE SET
+                    status='pending',
+                    started_at=NULL,
+                    finished_at=NULL,
+                    error_msg=NULL
             """, (doc_id,))
 
             conn.commit()

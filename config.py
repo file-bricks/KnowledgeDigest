@@ -16,6 +16,7 @@ Usage:
 
 __all__ = ["Config", "get_config"]
 
+import copy
 import json
 import os
 from pathlib import Path
@@ -66,7 +67,8 @@ class Config:
     """JSON-basierte Konfiguration."""
 
     def __init__(self, config_path: Optional[Path] = None):
-        self._data = dict(DEFAULT_CONFIG)
+        # deepcopy: Listen (z.B. indexed_directories) nicht mit DEFAULT_CONFIG teilen
+        self._data = copy.deepcopy(DEFAULT_CONFIG)
         self._path = config_path
         if config_path and config_path.exists():
             self._load(config_path)

@@ -43,7 +43,7 @@ import urllib.error
 from pathlib import Path
 from typing import Dict, List, Optional, Any, Callable
 
-from .schema import ensure_schema
+from .schema import ThreadLocalConnections, reset_stale_processing
 
 # System-Prompt fuer Summarization
 _SYSTEM_PROMPT = """\
@@ -61,6 +61,9 @@ _DEFAULT_MODELS = {
     "anthropic": "claude-haiku-4-5-20251001",
     "ollama": "qwen3:4b",
 }
+
+# Kosten-SCHAETZUNG Claude Haiku 4.5 in USD pro Million Tokens (input, output)
+_ANTHROPIC_PRICE_PER_MTOK = (1.00, 5.00)
 
 
 class Summarizer:
@@ -87,7 +90,7 @@ class Summarizer:
         self.model = model or _DEFAULT_MODELS.get(provider, "")
         self.base_url = base_url.rstrip("/")
         self.system_prompt = system_prompt or _SYSTEM_PROMPT
-        self._conn: Optional[sqlite3.Connection] = None
+        self._conns = ThreadLocalConnections()  # eine Connection pro Thread
 
         # Provider-spezifisch
         if provider == "anthropic":
@@ -100,14 +103,10 @@ class Summarizer:
         # ollama braucht keine Extra-Init
 
     def _get_conn(self) -> sqlite3.Connection:
-        if self._conn is None:
-            self._conn = ensure_schema(self.knowledge_db)
-        return self._conn
+        return self._conns.get(self.knowledge_db)
 
     def close(self):
-        if self._conn:
-            self._conn.close()
-            self._conn = None
+        self._conns.close_all()
 
     # === Provider Backends ===
 
@@ -203,6 +202,9 @@ class Summarizer:
             'items': [],
         }
 
+        # Nach Absturz/Abbruch haengengebliebene Items wieder freigeben
+        stats['reset_stale'] = reset_stale_processing(conn)
+
         queue_items = conn.execute("""
             SELECT id, source_type, source_id
             FROM digest_queue
@@ -248,10 +250,12 @@ class Summarizer:
                     'output_tokens': 0,
                 }
 
+                chunk_errors = []
                 for chunk_index, chunk_content in chunks:
                     summary_result = self._summarize_chunk(chunk_content)
 
                     if summary_result.get('error'):
+                        chunk_errors.append((chunk_index, summary_result['error']))
                         continue
 
                     conn.execute("""
@@ -285,6 +289,25 @@ class Summarizer:
                     if delay > 0:
                         time.sleep(delay)
 
+                stats['total_input_tokens'] += item_result['input_tokens']
+                stats['total_output_tokens'] += item_result['output_tokens']
+                stats['items'].append(item_result)
+
+                if chunk_errors:
+                    # Mindestens ein Chunk fehlgeschlagen -> 'error' statt
+                    # 'done' (erfolgreiche Summaries bleiben erhalten)
+                    first_idx, first_err = chunk_errors[0]
+                    item_result['chunk_errors'] = len(chunk_errors)
+                    conn.execute(
+                        "UPDATE digest_queue SET status='error', error_msg=?, "
+                        "finished_at=CURRENT_TIMESTAMP WHERE id=?",
+                        (f"{len(chunk_errors)}/{len(chunks)} Chunks fehlgeschlagen "
+                         f"(Chunk {first_idx}: {first_err})"[:500], queue_id)
+                    )
+                    conn.commit()
+                    stats['errors'] += 1
+                    continue
+
                 conn.execute(
                     "UPDATE digest_queue SET status='done', "
                     "finished_at=CURRENT_TIMESTAMP WHERE id=?",
@@ -293,9 +316,17 @@ class Summarizer:
                 conn.commit()
 
                 stats['processed'] += 1
-                stats['total_input_tokens'] += item_result['input_tokens']
-                stats['total_output_tokens'] += item_result['output_tokens']
-                stats['items'].append(item_result)
+
+            except KeyboardInterrupt:
+                # Abbruch (Ctrl+C): aktuelles Item nicht in 'processing'
+                # haengen lassen, sondern wieder freigeben
+                conn.execute(
+                    "UPDATE digest_queue SET status='pending', started_at=NULL "
+                    "WHERE id=?",
+                    (queue_id,)
+                )
+                conn.commit()
+                raise
 
             except Exception as e:
                 conn.execute(
@@ -310,8 +341,9 @@ class Summarizer:
         stats['duration_ms'] = elapsed
 
         if self.provider == "anthropic":
-            input_cost = stats['total_input_tokens'] / 1_000_000 * 0.25
-            output_cost = stats['total_output_tokens'] / 1_000_000 * 1.25
+            in_rate, out_rate = _ANTHROPIC_PRICE_PER_MTOK
+            input_cost = stats['total_input_tokens'] / 1_000_000 * in_rate
+            output_cost = stats['total_output_tokens'] / 1_000_000 * out_rate
             stats['estimated_cost_usd'] = round(input_cost + output_cost, 4)
 
         return stats
@@ -466,8 +498,9 @@ class Summarizer:
         }
 
         if self.provider == "anthropic":
-            input_cost = total_tokens_in / 1_000_000 * 0.25
-            output_cost = total_tokens_out / 1_000_000 * 1.25
+            in_rate, out_rate = _ANTHROPIC_PRICE_PER_MTOK
+            input_cost = total_tokens_in / 1_000_000 * in_rate
+            output_cost = total_tokens_out / 1_000_000 * out_rate
             result['summaries']['estimated_cost_usd'] = round(
                 input_cost + output_cost, 4
             )

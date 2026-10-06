@@ -18,15 +18,15 @@ __all__ = ["SkillIndexer", "import_bach_skills"]
 
 import sqlite3
 from pathlib import Path
-from typing import Dict, Optional, Any, Union
+from typing import Dict, Any, Union
 
 # Relative Imports (Paket-Kontext) mit Fallback auf absolute Imports (sys.path)
 try:
-    from .schema import ensure_schema
+    from .schema import ThreadLocalConnections
     from .chunker import chunk_text, estimate_tokens
     from .utils import sha256_hash as _sha256, extract_keywords as _extract_keywords
 except ImportError:
-    from schema import ensure_schema          # type: ignore[no-redef]
+    from schema import ThreadLocalConnections  # type: ignore[no-redef]
     from chunker import chunk_text, estimate_tokens  # type: ignore[no-redef]
     from utils import sha256_hash as _sha256, extract_keywords as _extract_keywords  # type: ignore[no-redef]
 
@@ -42,19 +42,15 @@ class SkillIndexer:
 
     def __init__(self, knowledge_db: Path):
         self.knowledge_db = knowledge_db
-        self._conn: Optional[sqlite3.Connection] = None
+        self._conns = ThreadLocalConnections()  # eine Connection pro Thread
 
     def _get_conn(self) -> sqlite3.Connection:
         """Lazy-init der DB-Connection mit Schema-Sicherstellung."""
-        if self._conn is None:
-            self._conn = ensure_schema(self.knowledge_db)
-        return self._conn
+        return self._conns.get(self.knowledge_db)
 
     def close(self):
         """Schliesst DB-Connection."""
-        if self._conn:
-            self._conn.close()
-            self._conn = None
+        self._conns.close_all()
 
     def index_from_bach(self, bach_db_path: Path, *,
                         chunk_size: int = 350,
@@ -119,7 +115,7 @@ class SkillIndexer:
             for row in rows:
                 skill_name = row['name']
                 content = row['content'] or ''
-                content_hash = row['content_hash'] or _sha256(content) if content else ''
+                content_hash = row['content_hash'] or (_sha256(content) if content else '')
 
                 # Skip wenn kein Content
                 if not content.strip():
@@ -162,7 +158,8 @@ class SkillIndexer:
                 """, (
                     skill_name, row['type'], row['category'], row['path'],
                     row['description'], row['version'], content_hash,
-                    word_count, chunk_count, row['is_active'] or 1,
+                    word_count, chunk_count,
+                    1 if row['is_active'] is None else row['is_active'],
                     str(bach_db_path),
                 ))
 

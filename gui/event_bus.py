@@ -5,7 +5,7 @@ Zentrale Event-Verteilung zwischen GUI-Modulen.
 Adaptiert von LitZentrum (src/core/event_bus.py).
 """
 
-from PySide6.QtCore import QObject, Signal
+from PySide6.QtCore import QObject, QThread, Qt, Signal
 from enum import Enum
 from typing import Any, Callable, Dict, List
 
@@ -43,12 +43,16 @@ class EventBus(QObject):
     """Zentrale Event-Verteilung (Singleton)"""
 
     event_fired = Signal(str, object)
+    # Intern: Events aus Worker-Threads in den GUI-Thread weiterreichen
+    _dispatch_requested = Signal(object, object)
 
     _instance = None
 
     def __init__(self):
         super().__init__()
         self._handlers: Dict[EventType, List[Callable]] = {}
+        self._dispatch_requested.connect(
+            self._dispatch, Qt.ConnectionType.QueuedConnection)
 
     @classmethod
     def instance(cls) -> "EventBus":
@@ -68,9 +72,19 @@ class EventBus(QObject):
                 self._handlers[event_type].remove(handler)
 
     def emit(self, event_type: EventType, data: Any = None):
+        """Verteilt ein Event an alle Handler -- immer im Thread des Bus
+        (GUI-Thread). Aus Worker-Threads (z.B. Scan) wird das Event per
+        Queued-Signal in den GUI-Thread verschoben, damit Handler dort
+        gefahrlos Qt-Widgets anfassen koennen."""
+        if QThread.currentThread() != self.thread():
+            self._dispatch_requested.emit(event_type, data)
+            return
+        self._dispatch(event_type, data)
+
+    def _dispatch(self, event_type: EventType, data: Any = None):
         self.event_fired.emit(event_type.value, data)
         if event_type in self._handlers:
-            for handler in self._handlers[event_type]:
+            for handler in list(self._handlers[event_type]):
                 try:
                     handler(data)
                 except Exception as e:

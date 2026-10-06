@@ -31,10 +31,27 @@ from .schema import ensure_schema
 from .config import get_config, Config
 from .ingestor import DocumentIngestor
 from .summarizer import Summarizer
+from .utils import dir_filter_sql, escape_like, fts5_quote, move_to_trash, resolve_document_path
 
 # Lazy imports fuer optionale Module
 _SkillIndexer = None
 _WikiIndexer = None
+
+
+def _fts_fetchall(conn: sqlite3.Connection, sql: str, params: list) -> list:
+    """Fuehrt eine FTS5-Abfrage aus (params[0] = MATCH-Query).
+
+    Bei FTS5-Syntaxfehlern durch Freitext (z.B. 'COVID-19', 'E-Mail', 'c++',
+    unbalancierte Anfuehrungszeichen) wird mit quotierten Tokens wiederholt.
+    Scheitert auch das, wird der Fehler weitergereicht (-> LIKE-Fallback).
+    """
+    try:
+        return conn.execute(sql, params).fetchall()
+    except sqlite3.OperationalError:
+        safe = fts5_quote(params[0])
+        if not safe or safe == params[0]:
+            raise
+        return conn.execute(sql, [safe, *params[1:]]).fetchall()
 
 
 def _get_skill_indexer():
@@ -190,7 +207,7 @@ class KnowledgeDigest:
                 LIMIT ?
             """
 
-            rows = conn.execute(sql, params).fetchall()
+            rows = _fts_fetchall(conn, sql, params)
 
             results = []
             seen_skills = set()
@@ -225,8 +242,8 @@ class KnowledgeDigest:
                          limit: int, skill_type: Optional[str],
                          category: Optional[str]) -> List[Dict[str, Any]]:
         """LIKE-basierte Fallback-Suche wenn FTS5 fehlschlaegt."""
-        where_parts = ["(sc.content LIKE ? OR si.skill_name LIKE ?)"]
-        like = f"%{query}%"
+        where_parts = ["(sc.content LIKE ? ESCAPE '\\' OR si.skill_name LIKE ? ESCAPE '\\')"]
+        like = f"%{escape_like(query)}%"
         params: list = [like, like]
 
         if skill_type:
@@ -489,9 +506,10 @@ class KnowledgeDigest:
         conn = self._get_conn()
         result = []
         for d in dirs:
+            where_sql, where_params = dir_filter_sql("source_dir", d)
             count = conn.execute(
-                "SELECT COUNT(*) FROM documents WHERE source_dir LIKE ?",
-                (d + "%",)
+                f"SELECT COUNT(*) FROM documents WHERE {where_sql}",
+                where_params
             ).fetchone()[0]
             result.append({"path": d, "doc_count": count})
         conn.close()
@@ -611,7 +629,7 @@ class KnowledgeDigest:
         """FTS5-Suche ueber ingested Dokumente."""
         conn = self._get_conn()
         try:
-            rows = conn.execute("""
+            rows = _fts_fetchall(conn, """
                 SELECT
                     d.filename,
                     d.file_type,
@@ -625,7 +643,7 @@ class KnowledgeDigest:
                 WHERE document_fts MATCH ?
                 ORDER BY document_fts.rank
                 LIMIT ?
-            """, (query, limit)).fetchall()
+            """, [query, limit])
 
             results = []
             seen = set()
@@ -644,9 +662,35 @@ class KnowledgeDigest:
                 })
             return results
         except Exception:
-            return []
+            # FTS5 Fallback: LIKE-Suche
+            return self._search_documents_fallback(conn, query, limit)
         finally:
             conn.close()
+
+    def _search_documents_fallback(self, conn: sqlite3.Connection, query: str,
+                                   limit: int) -> List[Dict[str, Any]]:
+        """LIKE-basierte Fallback-Suche ueber Dokumente wenn FTS5 fehlschlaegt."""
+        if not query.strip():
+            return []
+        like = f"%{escape_like(query)}%"
+        try:
+            rows = conn.execute("""
+                SELECT DISTINCT d.filename, d.file_type, d.word_count
+                FROM documents d
+                LEFT JOIN document_chunks dc ON dc.doc_id = d.id
+                WHERE dc.content LIKE ? ESCAPE '\\' OR d.filename LIKE ? ESCAPE '\\'
+                LIMIT ?
+            """, (like, like, limit)).fetchall()
+            return [{
+                'source': 'document',
+                'name': r['filename'],
+                'type': r['file_type'],
+                'snippet': '(LIKE-Fallback)',
+                'relevance': 0,
+                'word_count': r['word_count'],
+            } for r in rows]
+        except sqlite3.Error:
+            return []
 
     # ==================================================================
     # WIKI-ARTIKEL INDEXIERUNG
@@ -743,7 +787,7 @@ class KnowledgeDigest:
                 LIMIT ?
             """
 
-            rows = conn.execute(sql, params).fetchall()
+            rows = _fts_fetchall(conn, sql, params)
 
             results = []
             seen_wikis = set()
@@ -777,8 +821,8 @@ class KnowledgeDigest:
     def _search_wikis_fallback(self, conn: sqlite3.Connection, query: str,
                                limit: int, category: Optional[str]) -> List[Dict[str, Any]]:
         """LIKE-basierte Fallback-Suche wenn FTS5 fehlschlaegt."""
-        where_parts = ["(wc.content LIKE ? OR wi.title LIKE ?)"]
-        like = f"%{query}%"
+        where_parts = ["(wc.content LIKE ? ESCAPE '\\' OR wi.title LIKE ? ESCAPE '\\')"]
+        like = f"%{escape_like(query)}%"
         params: list = [like, like]
 
         if category:
@@ -1305,14 +1349,13 @@ Status:
                 print("Keine Duplikate gefunden!")
             else:
                 print(f"{len(dups)} Gruppen von Duplikaten gefunden.\n")
-                import shutil
                 import os
                 trash_dir = kd.db_path.parent / "_Papierkorb"
                 trash_dir.mkdir(parents=True, exist_ok=True)
                 
                 for row in dups:
                     hash_val = row['content_hash']
-                    docs = conn.execute("SELECT id, file_path, filename FROM documents WHERE content_hash=? ORDER BY id", (hash_val,)).fetchall()
+                    docs = conn.execute("SELECT id, file_path, filename, archived_path FROM documents WHERE content_hash=? ORDER BY id", (hash_val,)).fetchall()
                     print(f"\n--- Duplikat-Gruppe ({len(docs)} Dateien) ---")
                     for i, d in enumerate(docs):
                         print(f"  {i+1}: {d['file_path']}")
@@ -1324,28 +1367,28 @@ Status:
                             
                     for d in docs[1:]:
                         doc_id = d['id']
-                        file_path = d['file_path']
+                        file_path = resolve_document_path(d)
                         print(f"-> Loesche: {file_path}")
-                        
-                        if os.path.exists(file_path):
-                            base_name = os.path.basename(file_path)
-                            trash_path = trash_dir / base_name
-                            counter = 1
-                            while trash_path.exists():
-                                name, ext = os.path.splitext(base_name)
-                                trash_path = trash_dir / f"{name}_{counter}{ext}"
-                                counter += 1
+
+                        # Erst DB-Eintrag in einer Transaktion entfernen, dann
+                        # die Datei verschieben: schlaegt das Verschieben fehl,
+                        # bleibt die DB trotzdem konsistent.
+                        try:
+                            with conn:
+                                conn.execute("DELETE FROM summaries WHERE source_type='document' AND source_id=?", (doc_id,))
+                                conn.execute("DELETE FROM document_keywords WHERE doc_id=?", (doc_id,))
+                                conn.execute("DELETE FROM document_chunks WHERE doc_id=?", (doc_id,))
+                                conn.execute("DELETE FROM digest_queue WHERE source_type='document' AND source_id=?", (doc_id,))
+                                conn.execute("DELETE FROM documents WHERE id=?", (doc_id,))
+                        except sqlite3.Error as e:
+                            print(f"  Fehler beim Loeschen aus der DB (Datei unveraendert): {e}")
+                            continue
+
+                        if file_path and os.path.exists(file_path):
                             try:
-                                shutil.move(file_path, trash_path)
+                                move_to_trash(file_path, trash_dir)
                             except Exception as e:
-                                print(f"  Fehler beim Verschieben: {e}")
-                        
-                        conn.execute("DELETE FROM summaries WHERE source_type='document' AND source_id=?", (doc_id,))
-                        conn.execute("DELETE FROM document_keywords WHERE doc_id=?", (doc_id,))
-                        conn.execute("DELETE FROM document_chunks WHERE doc_id=?", (doc_id,))
-                        conn.execute("DELETE FROM digest_queue WHERE source_type='document' AND source_id=?", (doc_id,))
-                        conn.execute("DELETE FROM documents WHERE id=?", (doc_id,))
-                        conn.commit()
+                                print(f"  Fehler beim Verschieben (DB-Eintrag bereits entfernt): {e}")
                 print("\nDuplikat-Bereinigung abgeschlossen!")
         finally:
             conn.close()
