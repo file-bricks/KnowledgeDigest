@@ -2,10 +2,7 @@
 
 ## Overview
 
-KnowledgeDigest is a portable, self-contained knowledge database. It indexes
-documents from local directories, chunks them into searchable segments, and
-provides FTS5 full-text search via three interfaces: Desktop GUI, Web Viewer,
-and Python API.
+KnowledgeDigest indexes user-selected documents into a local SQLite database and provides FTS5 search through its desktop GUI, web viewer, CLI, and Python API. Optional summarization sends selected chunks and prompts to a configured provider; a custom API endpoint may be remote.
 
 ## Module Structure
 
@@ -88,7 +85,7 @@ sequenceDiagram
     participant Core as "Digest Core"
     participant Ingest as "Ingestor & Chunker"
     participant DB as "SQLite (FTS5 & Triggers)"
-    participant LLM as "LLM Summarizer"
+    participant LLM as "Configured LLM endpoint"
 
     Note over User,DB: Phase 1: Ingestion & Indexing
     User->>CLI: "Ingest directory (/path/to/docs)"
@@ -97,8 +94,9 @@ sequenceDiagram
     Ingest->>DB: "Store metadata, chunks & keywords"
     DB-->>DB: "Auto-sync BM25 FTS5 index via triggers"
     opt "Optional Summarization"
-        Core->>LLM: "Queue chunks (Gemini Flash / Claude Haiku)"
-        LLM-->>DB: "Store structured summaries & domain tags"
+        Core->>LLM: "Send selected chunks + prompt when invoked"
+        LLM-->>Core: "Return summary"
+        Core->>DB: "Store summary locally"
     end
     Core-->>CLI: "Ingestion complete & indexed"
 
@@ -132,8 +130,9 @@ Normalized multi-table schema with FTS5 full-text search:
 
 ### Portable JSON Config
 - No hardcoded paths; everything configurable via `knowledgedigest.json`
-- Config searched in: CWD → data/ → %APPDATA% → defaults
-- Copy the folder to another machine and it works
+- Config search order: CWD → package data/ → %APPDATA% (Windows, when set) → XDG_CONFIG_HOME or ~/.config/knowledgedigest/.
+- If no file exists, defaults and package data/ paths are used; an installed package directory may not be writable.
+- There is no --config CLI option. Python callers may pass an explicit path to get_config(config_path).
 
 ### FTS5 over Keyword Search
 - SQLite FTS5 provides BM25 ranking, snippet highlighting, prefix search
@@ -154,7 +153,7 @@ Normalized multi-table schema with FTS5 full-text search:
 
 ### Two Frontends
 - **PySide6 GUI**: Full desktop app with 3-panel layout, dark theme
-- **Web Viewer**: Python stdlib only (no dependencies), runs on localhost
+- **Web Viewer**: Python stdlib only; current HTTP server binds to 127.0.0.1 and is not an authenticated remote service
 
 ## API
 
@@ -178,9 +177,17 @@ python -m KnowledgeDigest status             # Index statistics
 python -m KnowledgeDigest search "query"     # FTS5 search
 ```
 
+## Provider and Data Boundaries
+
+- Local parsing, indexing, and FTS5 search do not require an LLM provider.
+- CLI summarize uses Anthropic by default; --flash selects Google GenAI. The Python API supports Ollama/custom base URLs.
+- Provider requests include selected document content and prompts. Custom endpoints may be remote.
+- Optional SQLite Transit synchronization can move configured snapshots between nodes.
+- The current desktop GUI has German-only visible strings and no language selector.
+
 ## Technical Constraints
 
 - Python 3.10+ with sqlite3 FTS5 support
 - `PYTHONIOENCODING=utf-8` required on Windows
 - Windows-compatible paths and encoding
-- PySide6 (LGPL) for GUI, no PyQt dependency
+- PySide6 for GUI, no PyQt dependency; upstream licensing options vary, so inspect the selected distribution's license files

@@ -2,38 +2,24 @@
 
 ## Supported Versions
 
-| Version | Supported |
-| --- | --- |
-| 0.4.x | :white_check_mark: Active security support |
-| < 0.4.0 | :x: End of life (please upgrade) |
+| Version | Status |
+|---|---|
+| 0.4.x | Current maintenance line |
 
-## Security Invariants & Architecture
+## Scope and Runtime Notes
 
-KnowledgeDigest is engineered around local-first data integrity:
+Document extraction, chunking, indexing, and FTS5 search operate on the configured local SQLite database. Optional summarization is a separate network boundary: the CLI defaults to Anthropic, --flash selects Google GenAI, and the Python API supports Ollama or a custom endpoint. Selected document text and prompts are sent to the configured provider when summarization is invoked. Custom endpoints may be remote.
 
-1. **Zero Egress by Default**: All document parsing, text chunking, and SQLite FTS5 search indexing occur 100% locally on your machine. No telemetry, usage statistics, or automated background telemetry calls are ever made.
-2. **Explicit LLM Boundary**: External network calls only happen when the user explicitly configures and invokes LLM summarization (`--flash` via Google GenAI or `--haiku` via Anthropic).
-3. **Web Viewer Hardening**:
-   - State-changing endpoints (`/open/`, `/api/reset_doc/`, `/api/delete_file/`) strictly enforce HTTP POST (HTTP 405 on GET).
-   - Host header validation mitigates DNS rebinding attacks.
-   - Origin / Referer checks protect against Cross-Site Request Forgery (CSRF).
-   - Search snippet outputs are escaped prior to `<mark>` tag injection to prevent stored XSS.
-4. **Unprivileged Execution**: KnowledgeDigest runs as a standard user process (`RunAsInvoker`) without requiring elevated or root permissions.
+The standard-library web viewer currently binds to 127.0.0.1 and checks request headers for state-changing routes. It uses HTTP without TLS and is not an authenticated remote service or an operating-system sandbox. Do not expose it to other hosts without a separate review.
+
+These notes describe reviewed source paths; they do not certify a deployment, dependency set, or user configuration.
 
 ## Reporting a Vulnerability
 
-If you discover a potential security vulnerability, please report it responsibly:
+Check the repository’s Security tab to see whether GitHub Private Vulnerability Reporting is enabled. If enabled, use its private report form. If it is unavailable, do not publish vulnerability details in a public issue; ask the maintainers for a private contact route.
 
-1. **Do NOT open a public issue.**
-2. **Use GitHub Private Vulnerability Reporting**:
-   Navigate to [GitHub Advisory Submission](https://github.com/file-bricks/knowledgedigest/security/advisories/new).
-3. Provide details:
-   - Component / module affected (e.g. `web_viewer.py`, `chunker.py`, `digest.py`)
-   - Steps to reproduce or proof-of-concept
-   - Potential impact and severity assessment
+Include the affected version, relevant component, reproducible steps, and impact. Avoid attaching private documents, credentials, or unrelated personal data.
 
-## Service Level Agreements (SLAs)
+## Response Expectations
 
-- **Initial Response**: Within 48 hours of report submission.
-- **Triage & Assessment**: Within 5 business days.
-- **Patch Deployment**: Security fixes will be released on `main` and tagged in a timely manner before coordinated disclosure.
+Maintainers aim to acknowledge reports within 48 hours and complete initial triage within five business days. When a fix is appropriate, they aim to coordinate a release before public disclosure. These are maintainer targets, not guaranteed service levels; investigation and release timing depend on severity, reproducibility, and capacity.
