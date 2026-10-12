@@ -1,76 +1,45 @@
-## Last-checked: 2026-09-22
-
 # KnowledgeDigest
 
-KnowledgeDigest is a local-first Python tool for indexing documents into a portable SQLite/FTS5 knowledge database. It supports sentence-bounded semantic chunking (~350 words), full-text search with BM25 ranking, optional LLM summaries (Gemini Flash / Claude Haiku), a PySide6 desktop GUI, a stdlib web viewer, CLI commands, and a Python API.
+KnowledgeDigest is a Python document-indexing and SQLite FTS5 search application. The local path extracts user-selected files, stores chunks and metadata in the configured SQLite database, and supports BM25-ranked full-text search through CLI, Python API, desktop GUI, and web viewer.
 
 Canonical repository: https://github.com/file-bricks/knowledgedigest
-Parent Organization: https://github.com/file-bricks
-Umbrella Ecosystem: https://github.com/open-bricks
-Author: Lukas Geiger (https://github.com/lukisch)
-License: MIT License (https://github.com/file-bricks/knowledgedigest/blob/main/LICENSE)
-Attribution: NOTICE (https://github.com/file-bricks/knowledgedigest/blob/main/NOTICE)
-Level 1 SBOM: THIRD_PARTY_LICENSES.md (https://github.com/file-bricks/knowledgedigest/blob/main/THIRD_PARTY_LICENSES.md)
+License of project source: MIT (LICENSE)
+Version remains 0.4.0; no release is implied by this documentation update.
 
-## Useful Entry Points
+## Data flow and boundaries
 
-- `README.md`: user-facing overview, 18-point dual-anchor navigation, installation, commands, and feature summary.
-- `README_de.md`: German documentation with reciprocal 18-point navigation parity.
-- `ARCHITECTURE.md`: module map, data flow, schema overview, and design decisions.
-- `THIRD_PARTY_LICENSES.md`: Level 1 SBOM inventory, runtime invariants (INV-LOCAL-01..INV-SLA-10), RunAsInvoker unprivileged execution, and Zero-Copyleft isolation guarantee.
-- `SECURITY.md`: local-first invariants, vulnerability reporting, and 48-hour response SLA.
-- `digest.py`: high-level API and CLI command implementation.
-- `web_viewer.py`: local browser viewer without external web framework dependencies (`http://localhost:8787`).
-- `gui/`: PySide6 desktop interface with dark theme and 3-panel layout.
-- `tests/test_metadata.py`: automated contract tests for PEP 621, SBOM invariants, and documentation parity.
-- `tests/test_no_agpl.py`: contract test enforcing zero-copyleft and prohibiting AGPL libraries (Decision E08).
+- Local parsing, indexing, and ordinary FTS5 search use the configured local SQLite database; no LLM provider is required for them.
+- CLI summarize uses Anthropic by default; summarize --flash selects Google GenAI. Selected chunks and prompts are sent to the configured provider when this command runs.
+- The Python Summarizer API also supports Ollama or a custom base URL. A custom endpoint may be remote.
+- Optional BACH import reads its configured SQLite database read-only and writes imported content to the KnowledgeDigest database.
+- Optional SQLite Transit synchronization can transfer configured snapshots between nodes.
+- The current web viewer binds to 127.0.0.1, uses HTTP without TLS, and is not an authenticated remote service.
+- The desktop GUI currently has German-only visible strings and no language selector.
 
-## Run And Test
+## Useful files
 
-```bash
-python -m pip install -e .
-python -m pytest
-python -m KnowledgeDigest status
-```
+- README.md and README_de.md: user documentation and navigation.
+- ARCHITECTURE.md: module, configuration, and data-flow notes.
+- SECURITY.md: vulnerability reporting guidance and bounded source notes.
+- THIRD_PARTY_LICENSES.md: manually maintained direct-dependency notes; not a generated SBOM or full transitive inventory.
+- NOTICE and LICENSE: project attribution and project-source license.
+- tests/test_metadata.py: metadata and navigation-anchor checks.
+- tests/test_packaging.py: package-data contract check.
+- tests/package_smoke.py: installed-artifact Qt icon smoke check; the packaging workflow separately runs the installed CLI with `--help`.
+- tests/test_no_agpl.py: source guard against selected explicit PyMuPDF import names; not a distribution-license audit.
+- .github/workflows/tests.yml: test matrix and wheel/sdist packaging smoke job.
 
-Runtime data is local and ignored by Git: `data/`, `*.db`, and `knowledgedigest.json`.
+## Configuration
 
-## Governance & Runtime Invariants
+Configuration filename is knowledgedigest.json. Lookup order is current working directory, package data/, Windows APPDATA/KnowledgeDigest/ when available, then XDG_CONFIG_HOME/knowledgedigest/ or ~/.config/knowledgedigest/. If none exists, built-in defaults are used with package data/ paths. An installed package directory may not be writable. There is no --config CLI option; Python callers can use get_config(Path(...)).
 
-- `INV-LOCAL-01`: Local-First & Zero Egress (all document parsing and SQLite queries run locally).
-- `INV-SQLITE-02`: ACID SQLite FTS5 Full-Text Search Engine with BM25 snippet ranking.
-- `INV-CHUNK-03`: Sentence-Bounded Semantic Chunking (~350 words, preserving grammatical clauses).
-- `INV-COPYLEFT-04`: Zero-Copyleft MIT Guarantee (`pypdfium2` over PyMuPDF, dynamically linked PySide6).
-- `INV-RUNAS-05`: Unprivileged User Mode (`RunAsInvoker`, no administrative elevation required).
-- `INV-DUAL-06`: Dual Frontends (PySide6 Native Desktop GUI + Stdlib Web Viewer on localhost:8787).
-- `INV-OPTLLM-07`: Optional Asynchronous LLM Integration (fully operational offline without LLM).
-- `INV-DEDUPE-08`: Cryptographic SHA-256 Deduplication with non-destructive `_Papierkorb` quarantine.
-- `INV-DOCS-09`: 100% Bilingual Documentation Parity (18-point reciprocal dual HTML anchors).
-- `INV-SLA-10`: Statutory Disclaimer (§ 521 BGB Gefälligkeitsrecht) & 48-hour security response SLA.
+## Related tools
 
-## Audience
+- NoteSpaceLLM: separate local SQLite/plain-text notebook for notes; no runtime integration is claimed (https://github.com/file-bricks/NoteSpaceLLM).
+- BACH: optional read-only SQLite import path when configured (https://github.com/ellmos-ai/bach).
+- SQLite Transit Sync: optional snapshot synchronization adapter (https://github.com/ellmos-ai/sqlite-transit-sync).
+- open-bricks: broader project family (https://github.com/open-bricks).
 
-- **Local-first users** who want a portable, self-contained document knowledge base without cloud dependencies
-- **Python developers** building document-indexing, retrieval, or LLM-preprocessing pipelines
-- **AI engineers** needing an offline, privacy-preserving search backend for local LLM workflows
-- **Researchers and writers** managing large collections of PDFs, Markdown, DOCX, and text files
-- **Privacy-conscious teams** who need FTS5 full-text search without any data leaving the local machine
+## Validation limits
 
-## Search Phrases
-
-```
-portable knowledge database Python
-local document search FTS5 SQLite
-PySide6 knowledge base app
-local-first document indexing Python
-LLM document summarization local
-offline document search tool Python
-KnowledgeDigest
-file-bricks knowledgedigest
-desktop document search offline-first
-local-first AI RAG database sqlite
-knowledge base desktop GUI Python
-sentence bounded text chunking python
-zero egress document indexing
-sqlite fts5 bm25 full text search
-```
+Test and package checks cover selected behavior only. They are not a complete security review, license audit, generated SBOM, or deployment assessment. Optional provider and sync behavior depends on user configuration.

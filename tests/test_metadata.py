@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Contract and metadata tests for KnowledgeDigest (Pfad A).
 Validates PEP 621 compliance, version parity, manifest consistency,
@@ -6,9 +5,9 @@ workflow constraints, and banner guardrails.
 """
 
 import json
-from pathlib import Path
 import py_compile
 import re
+from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 
@@ -106,20 +105,6 @@ def test_all_python_files_compile():
             raise AssertionError(f"Bytecode compilation failed for {py_file}: {exc}") from exc
 
 
-def test_security_policy_structure():
-    """Ensure SECURITY.md contains supported versions, SLA, and security invariants."""
-    sec_file = REPO_ROOT / "SECURITY.md"
-    assert sec_file.is_file(), "SECURITY.md must exist"
-    sec_text = sec_file.read_text(encoding="utf-8")
-
-    assert "Supported Versions" in sec_text
-    assert "0.4.x" in sec_text
-    assert "48 hours" in sec_text
-    assert "5 business days" in sec_text
-    assert "Zero Egress" in sec_text
-    assert "RunAsInvoker" in sec_text or "Unprivileged Execution" in sec_text
-
-
 def test_ci_workflow_integrity():
     """Ensure .github/workflows/tests.yml specifies required guardrails."""
     workflow_file = REPO_ROOT / ".github" / "workflows" / "tests.yml"
@@ -162,25 +147,6 @@ def test_canonical_notice_attribution():
     assert "MIT License" in content
 
 
-def test_level1_sbom_and_invariants():
-    """Verify THIRD_PARTY_LICENSES.md exists, lists Level 1 SBOM, RunAsInvoker, and all 10 invariants."""
-    sbom_file = REPO_ROOT / "THIRD_PARTY_LICENSES.md"
-    assert sbom_file.is_file(), "THIRD_PARTY_LICENSES.md must exist in repo root"
-    content = sbom_file.read_text(encoding="utf-8")
-    assert "Level 1 SBOM Inventory" in content
-    assert "RunAsInvoker" in content
-    assert "Zero-Copyleft Guarantee" in content
-    assert "pypdfium2" in content
-    assert "PySide6" in content
-    expected_invariants = [
-        "INV-LOCAL-01", "INV-SQLITE-02", "INV-CHUNK-03", "INV-COPYLEFT-04",
-        "INV-RUNAS-05", "INV-DUAL-06", "INV-OPTLLM-07", "INV-DEDUPE-08",
-        "INV-DOCS-09", "INV-SLA-10"
-    ]
-    for inv in expected_invariants:
-        assert inv in content, f"Expected invariant {inv} in THIRD_PARTY_LICENSES.md"
-
-
 def test_pyproject_version_freeze_and_license_files():
     """Verify PEP 621 version is strictly frozen at 0.4.0 (T-20260920-167562623) and license-files configured."""
     pyproject_file = REPO_ROOT / "pyproject.toml"
@@ -195,7 +161,7 @@ def test_pyproject_version_freeze_and_license_files():
 
 
 def test_bilingual_navigation_parity_18_points():
-    """Verify README.md and README_de.md maintain exact 18-point dual-anchor navigation parity."""
+    """Verify the 18 section anchor IDs used by the navigation remain present in both READMEs."""
     en_readme = (REPO_ROOT / "README.md").read_text(encoding="utf-8")
     de_readme = (REPO_ROOT / "README_de.md").read_text(encoding="utf-8")
 
@@ -203,38 +169,3 @@ def test_bilingual_navigation_parity_18_points():
         anchor = f'<a id="sec-{i:02d}"></a>'
         assert anchor in en_readme, f"Missing {anchor} in README.md"
         assert anchor in de_readme, f"Missing {anchor} in README_de.md"
-
-
-def test_target_personas_and_comparison_matrix():
-    """Verify both documentation files feature personas [PERSONA-01] to [PERSONA-04] and comparison matrix."""
-    en_readme = (REPO_ROOT / "README.md").read_text(encoding="utf-8")
-    de_readme = (REPO_ROOT / "README_de.md").read_text(encoding="utf-8")
-
-    for p in ["PERSONA-01", "PERSONA-02", "PERSONA-03", "PERSONA-04"]:
-        assert p in en_readme, f"Expected {p} in README.md"
-        assert p in de_readme, f"Expected {p} in README_de.md"
-
-    assert "INV-LOCAL-01" in en_readme
-    assert "INV-LOCAL-01" in de_readme
-
-
-def test_statutory_disclaimer_and_sla():
-    """Verify § 521 BGB statutory disclaimer and 48-hour response SLA across documentation and security policy."""
-    en_readme = (REPO_ROOT / "README.md").read_text(encoding="utf-8")
-    de_readme = (REPO_ROOT / "README_de.md").read_text(encoding="utf-8")
-    sec_policy = (REPO_ROOT / "SECURITY.md").read_text(encoding="utf-8")
-
-    assert "521 BGB" in en_readme
-    assert "521 BGB" in de_readme
-    assert "48" in en_readme
-    assert "48" in de_readme
-    assert "48 hours" in sec_policy or "48" in sec_policy
-
-
-def test_marketing_log_recency():
-    """Verify MARKETING-LOG.txt contains a recent Pfad B entry."""
-    log_file = REPO_ROOT / "MARKETING-LOG.txt"
-    assert log_file.is_file(), "MARKETING-LOG.txt must exist"
-    content = log_file.read_text(encoding="utf-8")
-    assert "2026-09-22" in content
-    assert "Pfad B" in content

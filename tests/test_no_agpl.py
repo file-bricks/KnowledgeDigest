@@ -25,7 +25,7 @@ REPO_ROOT = Path(__file__).resolve().parent.parent
 
 # Verzeichnisse, in denen kein eigener Quelltext liegt (Assets, Caches, Tests
 # selbst duerfen theoretisch importieren, tun es hier aber ebenfalls nicht).
-AUSGESCHLOSSEN = {"__pycache__", "mobile_icons", "assets", ".git"}
+AUSGESCHLOSSEN = {"__pycache__", "mobile_icons", "assets", ".git", "build", "dist"}
 
 # Namen, die eine Copyleft-Bindung in ein ausgeliefertes MIT-Modul tragen wuerden.
 VERBOTEN = {
@@ -35,13 +35,28 @@ VERBOTEN = {
 }
 
 
-def _modul_dateien() -> list[Path]:
+def _modul_dateien(root: Path = REPO_ROOT) -> list[Path]:
     dateien = []
-    for pfad in REPO_ROOT.rglob("*.py"):
-        if any(teil in AUSGESCHLOSSEN for teil in pfad.relative_to(REPO_ROOT).parts):
+    for pfad in root.rglob("*.py"):
+        teile = pfad.relative_to(root).parts
+        if any(teil in AUSGESCHLOSSEN or teil.endswith(".egg-info") for teil in teile):
             continue
         dateien.append(pfad)
     return sorted(dateien)
+
+
+def test_generated_packaging_outputs_do_not_enter_source_scan(tmp_path: Path):
+    source_file = tmp_path / "src" / "module.py"
+    generated_files = [
+        tmp_path / "build" / "module.py",
+        tmp_path / "dist" / "module.py",
+        tmp_path / "knowledgedigest.egg-info" / "metadata.py",
+    ]
+    for path in [source_file, *generated_files]:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text("VALUE = 1\n", encoding="utf-8")
+
+    assert _modul_dateien(tmp_path) == [source_file]
 
 
 def test_paket_hat_dateien():

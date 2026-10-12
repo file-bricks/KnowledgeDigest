@@ -19,13 +19,10 @@ keywords = [
   "sqlite",
   "document-search",
   "local-first",
-  "offline-first",
   "document-indexing",
   "document-processing",
   "pdf-indexer",
   "summarization",
-  "privacy-first",
-  "zero-egress",
   "desktop-app",
   "pyside6",
   "python",
@@ -111,6 +108,9 @@ packages = [
 
 [tool.setuptools.package-dir]
 KnowledgeDigest = "."
+
+[tool.setuptools.package-data]
+KnowledgeDigest = ["KnowledgeDigest.ico"]
 
 [tool.pytest.ini_options]
 minversion = "7.0"

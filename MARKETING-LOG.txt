@@ -1,3 +1,13 @@
+# Supersession note — 2026-10-12
+
+Entries below record historical work and do not verify current security, privacy, licensing, test-count, service-level, or compliance guarantees. Current public descriptions are limited to reviewed source paths and declared direct dependencies:
+
+- Core indexing and search use the configured local SQLite database. Optional summarization sends selected text and prompts to the configured provider when invoked; optional synchronization can move configured snapshots.
+- The dependency note is manually maintained and is not a generated SBOM or complete transitive-dependency audit.
+- The GUI currently has German-only strings. README validation checks 18 matching navigation anchors, not full translation parity.
+- Response times are maintainer goals, not guaranteed SLAs. GitHub Private Vulnerability Reporting availability depends on repository settings.
+- Version 0.4.0 remains frozen; this documentation update is not a release or store submission.
+
 # MARKETING-LOG.txt — KnowledgeDigest
 # Chronologisches Log fuer Repository-Pflege, Hygiene (Pfad A) und Sichtbarkeit/Marketing (Pfad B)
 

@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+- **Documentation and package boundary corrections (2026-10-12)**: Clarified that core indexing/search use the local database while optional provider and synchronization paths may transfer configured data; corrected CLI/configuration documentation; bounded dependency/license and security statements; added a wheel/sdist smoke gate for the packaged GUI icon. Version remains 0.4.0.
+
 - **Bugfix-Sweep (2026-10-06)**:
   - **FTS5-Delete-Trigger repariert (Schema v5)**: Die Trigger nutzten den FTS5-`'delete'`-Befehl auf regulären FTS5-Tabellen → `SQL logic error` bei jedem Löschen von Chunks (Re-Ingest, `index --force`, Web-Viewer-Löschen, `deduplicate`). Bestehende Datenbanken werden beim Öffnen migriert.
   - **Löschen konsistent**: Web-Viewer und `deduplicate` entfernen zuerst die DB-Einträge (Transaktion) und verschieben danach die Datei in `_Papierkorb`; Fehler pro Eintrag brechen den Lauf nicht mehr ab.
