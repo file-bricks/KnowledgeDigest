@@ -258,6 +258,7 @@ Wichtige Einstellungen sind db_path, indexed_directories, chunk_size, web_port u
 - **[SQLite Transit](https://github.com/ellmos-ai/sqlite-transit-sync)**: Ein optionaler Adapter kann konfigurierte Snapshots zwischen Systemen synchronisieren. Er gehört nicht zum standardmäßigen lokalen Indexierungspfad.
 - **[NoteSpaceLLM](https://github.com/file-bricks/NoteSpaceLLM)**: Ein verwandtes lokales SQLite-/Textnotizbuch. Es ist ein eigenes Werkzeug; eine Laufzeitintegration wird nicht behauptet.
 - **[ProFiler](https://github.com/file-bricks/ProFiler)**: Ein separates Datei- und PDF-Werkzeug im file-bricks-Ökosystem; eine integrierte Verbindung wird nicht behauptet.
+- **[FolderHome](https://github.com/ellmos-ai/FolderHome)**: Das Komponentenmanifest von FolderHome legt KnowledgeDigest auf Revision [`7040c66`](https://github.com/file-bricks/knowledgedigest/commit/7040c66aa9326975ad81c156acf0d49fd5dca60f) fest und deklariert `documents.index` mit `filesystem.write` sowie `documents.search` ohne deklarierte Nebeneffekte. Der [Provider-Checkout-Leitfaden](https://github.com/ellmos-ai/FolderHome/blob/main/docs/provider-checkouts.md) erläutert Manifesteintrag und Checkout-Einrichtung.
 - **Ökosystem**: KnowledgeDigest wird von [file-bricks](https://github.com/file-bricks) gehostet und gehört zur Projektfamilie [open-bricks](https://github.com/open-bricks).
 
 <a id="15-setup-installation"></a><a id="sec-15"></a><a id="setup-installation"></a>
