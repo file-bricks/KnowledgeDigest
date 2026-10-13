@@ -38,6 +38,7 @@ Configuration filename is knowledgedigest.json. Lookup order is current working 
 - NoteSpaceLLM: separate local SQLite/plain-text notebook for notes; no runtime integration is claimed (https://github.com/file-bricks/NoteSpaceLLM).
 - BACH: optional read-only SQLite import path when configured (https://github.com/ellmos-ai/bach).
 - SQLite Transit Sync: optional snapshot synchronization adapter (https://github.com/ellmos-ai/sqlite-transit-sync).
+- FolderHome: its component manifest pins KnowledgeDigest to revision [`7040c66`](https://github.com/file-bricks/knowledgedigest/commit/7040c66aa9326975ad81c156acf0d49fd5dca60f) and declares `documents.index` (`filesystem.write`) and `documents.search` (no declared side effects). [Provider-checkout guide](https://github.com/ellmos-ai/FolderHome/blob/main/docs/provider-checkouts.md).
 - open-bricks: broader project family (https://github.com/open-bricks).
 
 ## Validation limits
