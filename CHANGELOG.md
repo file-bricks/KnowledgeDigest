@@ -2,6 +2,13 @@
 
 ## [Unreleased]
 
+- **Test Environment & Import Fallback Hygiene (Pfad A, 2026-11-01)**:
+  - **Pytest Conftest Setup**: Added 	ests/conftest.py ensuring repo root is inserted into sys.path and providing fallback KnowledgeDigest module alias during direct test runs without prior pip install -e ..
+  - **Graceful Import Fallback in 	est_transit.py**: Added 	ry...except ImportError fallback for KnowledgeDigest.schema and KnowledgeDigest.transit imports, ensuring standalone execution parity with 	est_core.py and 	est_bach_import.py.
+  - **Test Suite Verification**: Verified all 219 tests pass (1 skipped for optional sqlite-transit-sync),
+uff check reports 0 errors, compileall clean, and all contract tests green. Version 0.4.0 strictly unchanged (T-20260920-167562623).
+
+
 - **Documentation and package boundary corrections (2026-10-12)**: Clarified that core indexing/search use the local database while optional provider and synchronization paths may transfer configured data; corrected CLI/configuration documentation; bounded dependency/license and security statements; added a wheel/sdist smoke gate for the packaged GUI icon. Version remains 0.4.0.
 
 - **Bugfix-Sweep (2026-10-06)**:

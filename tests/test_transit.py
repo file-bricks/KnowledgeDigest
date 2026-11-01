@@ -21,16 +21,28 @@ try:
 except ImportError:  # optional dependency, see transit.py
     SyncError = None
 
-from KnowledgeDigest.schema import ensure_schema
-from KnowledgeDigest.transit import (
-    TRANSIT_SYNC_AVAILABLE,
-    generate_chunk_key,
-    ChunkTaskManager,
-    KnowledgeDigestMergePolicy,
-    create_knowledge_sync,
-    utc_now,
-    iso_timestamp,
-)
+try:
+    from KnowledgeDigest.schema import ensure_schema
+    from KnowledgeDigest.transit import (
+        TRANSIT_SYNC_AVAILABLE,
+        generate_chunk_key,
+        ChunkTaskManager,
+        KnowledgeDigestMergePolicy,
+        create_knowledge_sync,
+        utc_now,
+        iso_timestamp,
+    )
+except ImportError:
+    from schema import ensure_schema
+    from transit import (
+        TRANSIT_SYNC_AVAILABLE,
+        generate_chunk_key,
+        ChunkTaskManager,
+        KnowledgeDigestMergePolicy,
+        create_knowledge_sync,
+        utc_now,
+        iso_timestamp,
+    )
 
 requires_transit_sync = pytest.mark.skipif(
     not TRANSIT_SYNC_AVAILABLE, reason="optional package sqlite-transit-sync not installed"
