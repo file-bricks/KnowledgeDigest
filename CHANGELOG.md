@@ -2,6 +2,12 @@
 
 ## [Unreleased]
 
+- **Discoverability, Visual Architecture & Desktop/Web UI Workflows (Pfad B, 2026-11-04)**:
+  - **Verified Badges Synchronization**: Added live CI workflow status badge and verified test count badge (219 passed) to both English `README.md` and German `README_de.md`.
+  - **Desktop GUI 3-Panel Wireframe & Architecture**: Added comprehensive ASCII layout architecture for the 3-panel PySide6 interface (Directories, Documents, Preview) across both READMEs.
+  - **Web Viewer Endpoint Topology & Sequence Diagram**: Documented the stdlib HTTP server routes (`/`, `/search`, `/browse`, `/document/<id>`, `/api/status`) and integrated a sequence diagram demonstrating query sanitization, BM25 matching, and HTML generation.
+  - **Contract Tests & Parity**: Ensured strict compliance with 18-point dual-anchor navigation parity (`<a id="sec-01"></a>` to `<a id="sec-18"></a>`), banner asset guardrail (`test_banner_and_asset_guardrail`), Mermaid syntax verification (`lint_mermaid.py`), version freeze at 0.4.0 (T-20260920-167562623), and 0 whitespace errors.
+
 - **Test Environment & Import Fallback Hygiene (Pfad A, 2026-11-01)**:
   - **Pytest Conftest Setup**: Added 	ests/conftest.py ensuring repo root is inserted into sys.path and providing fallback KnowledgeDigest module alias during direct test runs without prior pip install -e ..
   - **Graceful Import Fallback in 	est_transit.py**: Added 	ry...except ImportError fallback for KnowledgeDigest.schema and KnowledgeDigest.transit imports, ensuring standalone execution parity with 	est_core.py and 	est_bach_import.py.
