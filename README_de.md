@@ -8,6 +8,8 @@
 [![Lizenz: MIT](https://img.shields.io/badge/Lizenz-MIT-yellow.svg)](LICENSE)
 [![Attribution: NOTICE](https://img.shields.io/badge/Attribution-NOTICE-blue.svg)](NOTICE)
 [![Version: 0.4.0](https://img.shields.io/badge/Version-0.4.0-informational.svg)](CHANGELOG.md)
+[![CI: Tests](https://github.com/file-bricks/knowledgedigest/actions/workflows/tests.yml/badge.svg)](https://github.com/file-bricks/knowledgedigest/actions/workflows/tests.yml)
+[![Tests: 219 bestanden](https://img.shields.io/badge/Tests-219%20bestanden-success.svg)](#16-testing-contract-verification)
 [![Suche: SQLite FTS5](https://img.shields.io/badge/Suche-SQLite%20FTS5%20BM25-green.svg)](#3-architecture)
 [![GUI: PySide6](https://img.shields.io/badge/GUI-PySide6-41CD52.svg?logo=qt&logoColor=white)](#9-desktop-gui)
 [![Web: Stdlib](https://img.shields.io/badge/Web-Stdlib%20Zero--Dep-blue.svg)](#10-web-viewer)
@@ -168,16 +170,47 @@ Für optionale Anbieter- oder Synchronisierungsabläufe wird kein Offline-Betrie
 - **Sprache**: Die Desktop-GUI hat keinen Sprachumschalter; ihre Oberflächentexte sind deutsch. Die englische und deutsche README teilen 18 Anker-IDs, keine vollständige zeilenweise Übersetzungsparität.
 
 <a id="8-search-disambiguation"></a><a id="sec-08"></a><a id="search-disambiguation"></a>
-## 8. Umfang
+## 8. Umfang & Suchabsichten
 
 KnowledgeDigest indexiert lokale Dokumente und durchsucht sie mit FTS5. Dieser Pfad benötigt weder eine gehostete Datenbank noch einen LLM-Anbieter. Optionale Zusammenfassungen und Synchronisierung sind getrennte Abläufe und können Daten an konfigurierte externe Systeme senden. Prüfen Sie vor deren Nutzung Anbieter, Endpunkt, ausgewählte Dateien und Synchronisierungsziele.
 
-Suchbegriffe: lokale Dokumentensuche, SQLite FTS5, Python-Wissensdatenbank, Dokumentenindex, optionale LLM-Zusammenfassung.
+### Suchbegriffe & Themenkategorisierung
+- **Lokale Dokumentensuche**: portable Volltextsuche, SQLite FTS5 Engine, BM25 Snippet-Ranking, Offline-Wissensdatenbank.
+- **Desktop & Dokumentenaufnahme**: PySide6 Desktop-Dokumentenindexer, satzbezogenes Chunking, universelle Formatextraktion (PDF, DOCX, Markdown, HTML, TXT).
+- **Datenschutz & Grenzen**: Zero-Egress Dokumentenindexierung, rein lokale SQLite-Datei, optionale LLM-Zusammenfassungen (Anthropic Claude, Google GenAI Flash, Ollama).
 
 <a id="9-desktop-gui"></a><a id="sec-09"></a><a id="desktop-gui"></a>
 ## 9. Desktop-GUI
 
-Die PySide6-Desktopanwendung hat eine Verzeichnisleiste, eine Dokumententabelle und eine Vorschau. Ihre aktuellen Oberflächentexte sind deutsch; einen Sprachumschalter gibt es nicht. Das installierte Paket enthält das Anwendungssymbol; ein Paket-Smoke-Check prüft, ob es geladen werden kann.
+Die PySide6-Desktopanwendung bietet einen übersichtlichen 3-Spalten-Arbeitsbereich für effiziente Dokumentenverwaltung, schnelles Browsen und unmittelbare Textvorschau. Ihre aktuellen Oberflächentexte sind deutsch; einen Sprachumschalter gibt es nicht. Das installierte Paket enthält das Anwendungssymbol; ein Paket-Smoke-Check prüft, ob es geladen werden kann.
+
+### 3-Spalten-Splitter-Architektur
+
+```text
++-----------------------------------------------------------------------------------+
+|  KnowledgeDigest — Portable Lokale Wissensdatenbank                [ - | + | x ] |
++-----------------------------------------------------------------------------------+
+|  [📂 Verzeichnis laden] [🔄 Aktualisieren]    [⚙️ Einstellungen] [🌐 Web-Viewer]   |
++-----------------------------------------------------------------------------------+
+|  🔍 [ Volltextsuche (SQLite FTS5 + BM25 Ranking) ........................... ] [Go]|
++-----------------------+-----------------------------+-----------------------------+
+| 📁 Verzeichnisse      | 📄 Dokumente (Indexiert)    | 📑 Vorschau & Chunk-Details |
+|                       |                             |                             |
+| • /docs/papers/ (42)  | • attention_is_all_you_need | Dateiname: attention.pdf    |
+| • /docs/manuals/ (18) | • bert_pretraining.pdf      | Chunks: 14 | Wörter: 4.820  |
+| • /research/notizen(9)| • sqlite_fts5_guide.md      | SHA-256: 4a8b...12ef        |
+|                       | • architektur_v2.docx       |                             |
+|                       |                             | Textauszug: "...Transformer-|
+|                       |                             | Architektur mit Multi-Head- |
+|                       |                             | Self-Attention..."          |
++-----------------------+-----------------------------+-----------------------------+
+| Status: 69 Dokumente, 312 Chunks indexiert | DB: knowledge.db | Bereit            |
++-----------------------------------------------------------------------------------+
+```
+
+- **Verzeichnisleiste (Links)**: Baumansicht aller überwachten Dateisystem-Pfade mit Chunk-Anzahl.
+- **Dokumententabelle (Mitte)**: Sortierbare Tabellenansicht nach Dateiname, Typ, Wortanzahl und Indexierungszeitpunkt.
+- **Vorschaubereich (Rechts)**: Vollständige Textanzeige, extrahierte Schlüsselwörter und einzelne Chunks.
 
 Start: `python -m KnowledgeDigest --gui`
 
@@ -187,6 +220,35 @@ Die GUI benötigt die optionale Gruppe gui und eine grafische Anzeige.
 ## 10. Web-Viewer
 
 Der HTTP-Viewer aus der Standardbibliothek zeigt lokale Indexdaten, Dokumente und FTS5-Suchergebnisse. Der aktuelle Quelltext bindet an 127.0.0.1; schreibende Routen verlangen POST und prüfen Request-Header. Er verwendet lokales HTTP ohne TLS und ist kein authentifizierter Remote-Dienst.
+
+### Endpunkt-Übersicht & Routenplan
+
+| Endpunkt | Methode | Bereich & Verhalten |
+|---|---|---|
+| `/` | `GET` | Dashboard mit Korpus-Statistiken, Index-Zählern und Schnellsuche. |
+| `/search?q=...` | `GET` | FTS5-Volltextsuche mit BM25-Ranking und hervorgehobenen Textausschnitten. |
+| `/browse` | `GET` | Paginierte Katalogansicht mit Dateityp-Filtern (PDF, DOCX, MD usw.). |
+| `/document/<id>` | `GET` | Dokumenten-Inspektion: Metadaten, Chunks, Schlüsselwörter und Zusammenfassungen. |
+| `/api/status` | `GET` | JSON-Endpunkt für Korpus-Metriken und Trigger-Status für Skripte. |
+
+### Abfrage- und Render-Ablauf
+
+```mermaid
+sequenceDiagram
+    autonumber
+    actor Browser as "Webbrowser (Localhost)"
+    participant Server as "Stdlib HTTP-Server (:8787)"
+    participant FTS as "SQLite FTS5 Core"
+    participant DB as "knowledge.db"
+
+    Browser->>Server: "GET /search?q=transformer"
+    Server->>Server: "FTS5-Suchbegriff bereinigen und quotieren"
+    Server->>FTS: "MATCH 'transformer' ORDER BY bm25(document_fts)"
+    FTS->>DB: "Passende Chunks abfragen und Textauszuege hervorheben"
+    DB-->>Server: "Rangierte Trefferzeilen (Chunks, doc_id, BM25-Score)"
+    Server->>Server: "Autarkes HTML mit integriertem Dark-Theme rendern"
+    Server-->>Browser: "HTTP 200 OK (Interaktive Suchergebnisse)"
+```
 
 Start: `python -m KnowledgeDigest --web`
 
